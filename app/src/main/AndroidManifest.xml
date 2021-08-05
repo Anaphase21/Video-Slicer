@@ -19,15 +19,15 @@
         android:roundIcon="@mipmap/ic_launcher_round"
         android:supportsRtl="true"
         android:theme="@style/AppTheme">
-        <activity android:name=".MediaStoreFileBrowser"
+        <activity android:name=".ui.browser.MediaStoreFileBrowser"
             android:parentActivityName=".MainActivity"></activity>
-        <activity android:name=".BaseFileBrowserActivity" />
+        <activity android:name=".ui.browser.BaseFileBrowserActivity" />
         <activity
-            android:name=".ResultsActivity"
-            android:parentActivityName=".EditFileActivity" />
+            android:name=".ui.browser.ResultsActivity"
+            android:parentActivityName=".ui.editor.EditFileActivity" />
         <activity
-            android:name=".EditFileActivity"
-            android:parentActivityName=".FileBrowserActivity"
+            android:name=".ui.editor.EditFileActivity"
+            android:parentActivityName=".ui.browser.FileBrowserActivity"
             android:screenOrientation="sensorPortrait">
             <intent-filter>
                 <action android:name="android.intent.action.EDIT" />
@@ -39,7 +39,7 @@
             </intent-filter>
         </activity>
         <activity
-            android:name=".FileBrowserActivity"
+            android:name=".ui.browser.FileBrowserActivity"
             android:parentActivityName=".MainActivity" />
         <!--
                Set to true if your app is Standalone, that is, it does not require the handheld

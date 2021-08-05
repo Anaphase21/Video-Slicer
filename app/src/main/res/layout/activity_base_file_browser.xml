@@ -4,11 +4,11 @@
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
     xmlns:tools="http://schemas.android.com/tools"
-    tools:context=".BaseFileBrowserActivity">
+    tools:context=".ui.browser.BaseFileBrowserActivity">
     <include layout="@layout/toolbar" android:id="@+id/top_toolbar_layout"
         app:layout_constraintTop_toTopOf="parent"
         app:layout_constraintLeft_toLeftOf="parent"/>
-    <view class="com.anaphase.videoeditor.BaseFileBrowserActivity$CustomRecyclerView"
+    <view class="com.anaphase.videoeditor.ui.browser.BaseFileBrowserActivity$CustomRecyclerView"
         android:id="@+id/media_files_recycler_view"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"

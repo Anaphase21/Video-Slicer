@@ -4,6 +4,9 @@ import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.app.ActivityCompat;
 import androidx.core.content.ContextCompat;
 
+import com.anaphase.videoeditor.ui.browser.FileBrowserActivity;
+import com.anaphase.videoeditor.ui.browser.MediaStoreFileBrowser;
+import com.anaphase.videoeditor.util.SortTypeEnum;
 import com.google.android.material.appbar.MaterialToolbar;
 import com.google.android.material.button.MaterialButton;
 
@@ -19,8 +22,6 @@ import android.provider.Settings;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.view.SubMenu;
-
-import java.io.File;
 
 public class MainActivity extends AppCompatActivity {
 
@@ -49,7 +50,6 @@ public class MainActivity extends AppCompatActivity {
         browserStylePreferencesKey = getString(R.string.browser_type);
         inflateTopToolbarMenu();
         chooseFile = (MaterialButton)findViewById(R.id.choose_file);
-        //browserStyleEnum = BrowserStyle.FOLDERS;
         chooseFile.setOnClickListener((e)->{
             switch(browserStyleEnum){
                 case FOLDERS:
@@ -61,25 +61,12 @@ public class MainActivity extends AppCompatActivity {
             }
         });
         requestPermission();
-        File[] files = getExternalMediaDirs();
-        for(File file : files) {
-            System.out.println("EXTERNAL DIRECTORY>>" + (file == null ? "Null" : file.getPath()));
-        }
-        //requestAllFilesAccess();
-        //FFprobe.execute("\"/storage/emulated/0/Download/Mulan/Ambitions.S01E08.WEBRip.x264-TBS[ettv]/Merlin.S05E13.The.Diamond.of.the.Day.Part.2.720p.BluRay.x264-Pahe.in6.mkv\"");
-/*        StorageManager storageManager = (StorageManager)getSystemService(STORAGE_SERVICE);
-        List<StorageVolume> volumeList = storageManager.getStorageVolumes();
-        for(StorageVolume volume : volumeList) {
-            Log.d("volume", volume.toString()+"    "+volume.getUuid());
-        }*/
-        //initialiseToolbarMenu();
     }
 
     private void requestPermission(){
         if (ContextCompat.checkSelfPermission(
                 this, Manifest.permission.WRITE_EXTERNAL_STORAGE) ==
                 PackageManager.PERMISSION_GRANTED) {
-            System.out.println("PERMISSION GRANTED");
             // You can use the API that requires the permission.
             //} else if (shouldShowRequestPermissionRationale(...)) {
             // In an educational UI, explain to the user why your app requires this
@@ -90,7 +77,6 @@ public class MainActivity extends AppCompatActivity {
         } else {
             String[] permissions = new String[]{Manifest.permission.WRITE_EXTERNAL_STORAGE, Manifest.permission.READ_EXTERNAL_STORAGE};
             ActivityCompat.requestPermissions(this, permissions, 1);
-            System.out.println("Permission not granted");
         }
     }
 
@@ -101,9 +87,7 @@ public class MainActivity extends AppCompatActivity {
     }
 
     private void inflateTopToolbarMenu(){
-        //topToolbar.inflateMenu(R.menu.top_toolbar_menu);
         Menu menu = topToolbar.getMenu();
-        //settingsItem = menu.getItem(0);
         SubMenu browserStyleSubMenu = menu.addSubMenu("Browser style");
         SubMenu sortTypeSubMenu = menu.addSubMenu("Sort files by");
         browserStyleSubMenu.add("Folders");
@@ -119,19 +103,18 @@ public class MainActivity extends AppCompatActivity {
 
         allFoldersMenuItem = browserStyleSubMenu.getItem(0);
         fileBrowserMenuItem = browserStyleSubMenu.getItem(1);
-        //allFoldersMenuItem.setChecked(true);
 
         allFoldersMenuItem.setOnMenuItemClickListener((item->{
             allFoldersMenuItem.setChecked(true);
             browserStyleEnum = BrowserStyle.FOLDERS;
-            com.anaphase.videoeditor.Settings.save(this, browserStylePreferencesKey, browserStyleEnum.browserStyle);
+            com.anaphase.videoeditor.util.Settings.save(this, browserStylePreferencesKey, browserStyleEnum.browserStyle);
             return true;
         }));
 
         fileBrowserMenuItem.setOnMenuItemClickListener((item->{
             fileBrowserMenuItem.setChecked(true);
             browserStyleEnum = BrowserStyle.FILE_BROWSER;
-            com.anaphase.videoeditor.Settings.save(this, browserStylePreferencesKey, browserStyleEnum.browserStyle);
+            com.anaphase.videoeditor.util.Settings.save(this, browserStylePreferencesKey, browserStyleEnum.browserStyle);
             return true;
         }));
 
@@ -139,41 +122,40 @@ public class MainActivity extends AppCompatActivity {
         sortByDateModifiedMenuItem = sortTypeSubMenu.getItem(1);
         sortByFileSizeMenuItem = sortTypeSubMenu.getItem(2);
         sortByDurationMenuItem = sortTypeSubMenu.getItem(3);
-        //sortByNameMenuItem.setChecked(true);
 
         retrieveSettings();
 
         sortByNameMenuItem.setOnMenuItemClickListener((item->{
             sortByNameMenuItem.setChecked(true);
             sortTypeEnum = SortTypeEnum.BY_NAME;
-            com.anaphase.videoeditor.Settings.save(this, sortByPreferencesKey, sortTypeEnum.sortType);
+            com.anaphase.videoeditor.util.Settings.save(this, sortByPreferencesKey, sortTypeEnum.sortType);
             return true;
         }));
 
         sortByDateModifiedMenuItem.setOnMenuItemClickListener((item->{
             sortByDateModifiedMenuItem.setChecked(true);
             sortTypeEnum = SortTypeEnum.BY_DATE;
-            com.anaphase.videoeditor.Settings.save(this, sortByPreferencesKey, sortTypeEnum.sortType);
+            com.anaphase.videoeditor.util.Settings.save(this, sortByPreferencesKey, sortTypeEnum.sortType);
             return true;
         }));
 
         sortByFileSizeMenuItem.setOnMenuItemClickListener((ite->{
             sortByFileSizeMenuItem.setChecked(true);
             sortTypeEnum = SortTypeEnum.BY_SIZE;
-            com.anaphase.videoeditor.Settings.save(this, sortByPreferencesKey, sortTypeEnum.sortType);
+            com.anaphase.videoeditor.util.Settings.save(this, sortByPreferencesKey, sortTypeEnum.sortType);
             return true;
         }));
 
         sortByDurationMenuItem.setOnMenuItemClickListener((item->{
             sortByDurationMenuItem.setChecked(true);
             sortTypeEnum = SortTypeEnum.BY_DURATION;
-            com.anaphase.videoeditor.Settings.save(this, sortByPreferencesKey, sortTypeEnum.sortType);
+            com.anaphase.videoeditor.util.Settings.save(this, sortByPreferencesKey, sortTypeEnum.sortType);
             return true;
         }));
     }
 
     private void retrieveSettings(){
-        int sortBy = com.anaphase.videoeditor.Settings.retrieve(this, this.sortByPreferencesKey);
+        int sortBy = com.anaphase.videoeditor.util.Settings.retrieve(this, this.sortByPreferencesKey);
         switch(sortBy){
             case 0:
             case -1:
@@ -194,7 +176,7 @@ public class MainActivity extends AppCompatActivity {
                 break;
         }
 
-        int browserStyle = com.anaphase.videoeditor.Settings.retrieve(this, browserStylePreferencesKey);
+        int browserStyle = com.anaphase.videoeditor.util.Settings.retrieve(this, browserStylePreferencesKey);
             if(browserStyle == BrowserStyle.FILE_BROWSER.browserStyle){
                 browserStyleEnum = BrowserStyle.FILE_BROWSER;
                 fileBrowserMenuItem.setChecked(true);
