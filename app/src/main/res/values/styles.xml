@@ -1,0 +1,51 @@
+<resources>
+    <!-- Base application theme. -->
+    <style name="AppTheme" parent="Theme.MaterialComponents.NoActionBar">
+        <!-- Customize your theme here. -->
+        <item name="colorPrimary">@color/primaryColor</item>
+        <item name="colorPrimaryDark">@color/primaryDarkColor</item>
+        <item name="colorAccent">@color/primaryLightColor</item>
+        <item name="windowActionModeOverlay">true</item>
+        <item name="popupTheme">@style/VE.Submenu</item>
+        <item name="android:alertDialogTheme">@style/VE.AlertDialogTheme</item>
+    </style>
+    <style name="VE.Button" parent="Widget.MaterialComponents.Button">
+        <item name="android:textColor">@color/primaryTextColor</item>
+        <item name="android:textSize">10sp</item>
+        <item name="android:textColorPrimary">@color/primaryTextColor</item>
+    </style>
+    <style name="VE.Buttons" parent="Widget.AppCompat.CompoundButton.CheckBox">
+        <item name="colorControlActivated">@color/secondaryDarkColor</item>
+        <item name="colorSurface">@color/secondaryDarkColor</item>
+        <item name="colorOnSurface">@color/secondaryDarkColor</item>
+        <item name="android:textSize">10sp</item>
+    </style>
+    <style name="VE.CheckBox" parent="VE.Buttons"></style>
+    <style name="VE.RadioButton" parent="VE.Buttons"></style>
+    <style name="VE.NumberPicker" parent="AppTheme">
+        <item name="android:textSize">10sp</item>
+        <item name="colorControlNormal">@color/secondaryDarkColor</item>
+    </style>
+    <style name="VE.Toolbar" parent="AppTheme">
+        <item name="android:textSize">15sp</item>
+        <item name="android:textStyle">normal</item>
+        <item name="titleMarginStart">0dp</item>
+        <item name="titleMarginEnd">0dp</item>
+        <item name="android:typeface">normal</item>
+        <item name="android:letterSpacing">0.0</item>
+    </style>
+    <style name="VE.Submenu" parent="Widget.AppCompat.PopupMenu">
+        <item name="colorAccent">@color/secondaryDarkColor</item>
+        <item name="android:colorControlActivated">@color/secondaryDarkColor</item>
+        <item name="android:textSize">15sp</item>
+    </style>
+    <style name="VE.AlertButtons" parent="Widget.MaterialComponents.Button.TextButton.Dialog">
+        <item name="android:textColor">@color/secondaryDarkColor</item>
+        <item name="android:textSize">12sp</item>
+    </style>
+    <style name="VE.AlertDialogTheme" parent="ThemeOverlay.MaterialComponents.MaterialAlertDialog">
+        <item name="buttonBarPositiveButtonStyle">@style/VE.AlertButtons</item>
+        <item name="buttonBarNegativeButtonStyle">@style/VE.AlertButtons</item>
+        <item name="buttonBarNeutralButtonStyle">@style/VE.AlertButtons</item>
+    </style>
+</resources>

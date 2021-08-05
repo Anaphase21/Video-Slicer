@@ -1,0 +1,12 @@
+<resources>
+    <string name="app_name">Video Editor</string>
+    <string name="title_activity_file_browser">FileBrowserActivity</string>
+    <string name="bottom_toolbar_cut_item">Cut</string>
+    <string name="bottom_toolbar_undo_item">Undo</string>
+    <string name="select_button">Select</string>
+    <string name="done_button">Done</string>
+    <string name="settings">com.anaphase.videoeditor.SETTINGS</string>
+    <string name="sort_by">com.anaphase.videoeditor.SORT_BY</string>
+    <string name="browser_type">com.anaphase.videoeditor.BROWSER_TYPE</string>
+    <string name="cut_speed">com.anaphase.videoeditor.CUT_SPEED</string>
+</resources>

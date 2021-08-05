@@ -1,0 +1,107 @@
+<?xml version="1.0" encoding="utf-8"?>
+<androidx.constraintlayout.widget.ConstraintLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:id="@+id/edit_activity_layout"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    tools:context=".EditFileActivity">
+    <include layout="@layout/toolbar" android:id="@+id/toolbar"/>
+    <VideoView
+        android:id="@+id/video_canvas"
+        android:layout_width="wrap_content"
+        android:layout_height="250dp"
+        app:layout_constraintTop_toBottomOf="@id/toolbar"
+        app:layout_constraintLeft_toRightOf="parent"
+        app:layout_constraintRight_toLeftOf="parent"/>
+    <com.anaphase.videoeditor.Timeline
+        android:id="@+id/timeline"
+        android:layout_width="300dp"
+        android:layout_height="43dp"
+        android:background="#999999"
+        android:layout_marginTop="10dp"
+        app:layout_constraintRight_toLeftOf="parent"
+        app:layout_constraintLeft_toRightOf="parent"
+        app:layout_constraintTop_toBottomOf="@id/video_canvas"/>
+    <com.google.android.material.checkbox.MaterialCheckBox
+        android:id="@+id/constant_interval_checkbox"
+        android:layout_width="100dp"
+        android:layout_height="60dp"
+        android:layout_marginLeft="20dp"
+        android:text="Constant"
+        android:theme="@style/VE.CheckBox"
+        app:layout_constraintLeft_toLeftOf="parent"
+        app:layout_constraintTop_toBottomOf="@id/timeline"
+        />
+
+    <ImageButton
+        android:id="@+id/confirm_interval_selection"
+        android:layout_width="30dp"
+        android:layout_height="30dp"
+        android:layout_marginLeft="8dp"
+        android:layout_marginTop="15dp"
+        android:background="@drawable/auto_cut_background_shape"
+        android:src="@drawable/ic_content_cut_disabled_24px"
+        android:theme="@style/VE.RadioButton"
+        app:layout_constraintLeft_toRightOf="@id/constant_interval_checkbox"
+        app:layout_constraintRight_toLeftOf="@id/constant_interval_picker"
+        app:layout_constraintTop_toBottomOf="@id/timeline" />
+
+    <NumberPicker
+        android:id="@+id/constant_interval_picker"
+        android:layout_width="60dp"
+        android:layout_height="50dp"
+        android:layout_marginRight="10dp"
+        android:layout_marginTop="0dp"
+        app:layout_constraintTop_toBottomOf="@id/timeline"
+        app:layout_constraintRight_toRightOf="parent"
+        android:theme="@style/VE.NumberPicker"/>
+    <RadioGroup
+        android:id="@+id/edit_type_radio_buttons"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        app:layout_constraintTop_toBottomOf="@id/constant_interval_checkbox"
+        app:layout_constraintLeft_toLeftOf="parent" android:orientation="horizontal">
+        <com.google.android.material.radiobutton.MaterialRadioButton
+            android:id="@+id/cut_file"
+            android:layout_width="80dp"
+            android:layout_height="60dp"
+            android:layout_marginLeft="10dp"
+            android:text="Cut file"
+            android:theme="@style/VE.RadioButton"/>
+        <com.google.android.material.radiobutton.MaterialRadioButton
+            android:id="@+id/grab_mp3"
+            android:layout_width="100dp"
+            android:layout_height="60dp"
+            android:layout_marginLeft="10dp"
+            android:text="Grab mp3"
+            android:theme="@style/VE.RadioButton"/>
+        <com.google.android.material.radiobutton.MaterialRadioButton
+            android:id="@+id/grab_thumbnail"
+            android:layout_width="150dp"
+            android:layout_height="60dp"
+            android:layout_marginLeft="10dp"
+            android:text="Grab thumbnail"
+            android:theme="@style/VE.RadioButton"/>
+    </RadioGroup>
+    <com.google.android.material.button.MaterialButton
+        android:id="@+id/start_task"
+        android:layout_width="100dp"
+        android:layout_height="wrap_content"
+        android:text="@string/select_button"
+        app:layout_constraintTop_toBottomOf="@id/edit_type_radio_buttons"
+        app:layout_constraintLeft_toRightOf="parent"
+        app:layout_constraintRight_toLeftOf="parent"
+        android:theme="@style/VE.Button"
+        android:textColor="@color/primaryTextColor"/>
+    <com.google.android.material.appbar.AppBarLayout
+        android:id="@+id/bottom_toolbar_layout"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        app:layout_constraintBottom_toBottomOf="parent">
+        <com.google.android.material.appbar.MaterialToolbar
+            android:id="@+id/bottom_toolbar"
+            android:layout_width="match_parent"
+            android:layout_height="45dp"/>
+    </com.google.android.material.appbar.AppBarLayout>
+</androidx.constraintlayout.widget.ConstraintLayout>

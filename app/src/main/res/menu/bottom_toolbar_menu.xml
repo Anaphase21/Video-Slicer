@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="utf-8"?>
+<menu xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:id="@+id/bottom_toolbar_menu">
+
+    <item
+        android:id="@+id/cut_item"
+        android:icon="@drawable/ic_content_cut_24px"
+        android:title="Cut"
+        android:orderInCategory="2"
+        app:showAsAction="always" />
+    <item
+        android:id="@+id/undo_item"
+        android:title="Undo"
+        android:icon="@drawable/ic_undo_disabled_24px"
+        android:orderInCategory="0"
+        app:showAsAction="always" />
+    <item
+        android:id="@+id/dummy_view"
+        android:orderInCategory="1"
+        android:title=""
+        app:showAsAction="always"
+        app:actionViewClass="android.widget.TextView"/>
+</menu>

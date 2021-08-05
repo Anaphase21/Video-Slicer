@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<android.widget.CompoundButton xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/select_part_button"
+    android:layout_width="20dp" android:layout_height="20dp"
+    android:button="@drawable/select_part_shape"
+    android:background="@drawable/select_part_shape">
+</android.widget.CompoundButton>
