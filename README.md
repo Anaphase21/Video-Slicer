@@ -1,4 +1,4 @@
-# Video-Editor
+# Video-Slicer
 This is a video slicing app. You can:
 (1)Slice any video with flexible options.
 (2)Slice audio files as well.
