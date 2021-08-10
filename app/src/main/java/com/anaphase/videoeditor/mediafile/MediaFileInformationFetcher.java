@@ -36,10 +36,10 @@ public class MediaFileInformationFetcher implements Runnable{
 
     @Override
     public void run(){
-        int width = 0;
-        int height = 0;
+        int width;
+        int height;
         Bitmap thumbnail = null;
-        if(mediaFile.isAudioTrack()){
+        if(mediaFile.isAudio()){
             mediaFile.setFileIcon(Icon.createWithResource(mediaFile.getContext(), R.drawable.ic_baseline_audiotrack_24));
         }else if(mediaFile.isDirectory()){
             mediaFile.setFileIcon(Icon.createWithResource(mediaFile.getContext(), R.drawable.ic_baseline_folder_24));
@@ -50,8 +50,11 @@ public class MediaFileInformationFetcher implements Runnable{
                         thumbnail = MediaStore.Images.Media.getBitmap(mediaFile.getContext().getContentResolver(), Uri.fromFile(new File(mediaFile.getPath())));
                         width = thumbnail.getWidth();
                         height = thumbnail.getHeight();
-                        thumbnail = Bitmap.createScaledBitmap(thumbnail, (int)Math.ceil(width / height) * (int)(DP_SCALE * 40.0f), (int)(DP_SCALE * 40.0f), false);
-                    }catch(FileNotFoundException fileNotFoundException){}catch (IOException ioe){}
+                        thumbnail = Bitmap.createScaledBitmap(thumbnail, (int)Math.ceil((float)width / height) * (int)(DP_SCALE * 40.0f), (int)(DP_SCALE * 40.0f), false);
+                    }catch(FileNotFoundException fileNotFoundException){
+                        fileNotFoundException.printStackTrace();}catch (IOException ioe){
+                        ioe.printStackTrace();
+                    }
                 }else if(mediaFile.isVideo()){
                     thumbnail = ThumbnailUtils.createVideoThumbnail(mediaFile.getPath(), MediaStore.Images.Thumbnails.MINI_KIND);
                 }
@@ -60,11 +63,13 @@ public class MediaFileInformationFetcher implements Runnable{
                     try {
                         thumbnail = ThumbnailUtils.createImageThumbnail(new File(mediaFile.getPath()), new Size((int)(DP_SCALE * 40.0f), (int)(DP_SCALE * 40.0f)), null);
                     } catch (IOException ioe) {
+                        ioe.printStackTrace();
                     }
                 } else if (mediaFile.isVideo()) {
                     try {
                         thumbnail = ThumbnailUtils.createVideoThumbnail(new File(mediaFile.getPath()), new Size((int)(DP_SCALE * 40.0f), (int)(DP_SCALE * 40.0f)), null);
                     } catch (IOException ioException) {
+                        ioException.printStackTrace();
                     }
                 }
             }
@@ -84,7 +89,7 @@ public class MediaFileInformationFetcher implements Runnable{
                     mediaFile.setFileDuration(0);
                 }
             }
-            Uri uri = null;
+            Uri uri;
             if(mediaFile.getUri() == null) {
                 if (mediaFile.isVideo()) {
                     uri = Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q ? MediaStore.Video.Media.getContentUri(MediaStore.VOLUME_EXTERNAL) :
@@ -115,7 +120,9 @@ public class MediaFileInformationFetcher implements Runnable{
         try {
             fileSize = file.length();
             dateLastModified = file.lastModified();
-        }catch(SecurityException securityException){}
+        }catch(SecurityException securityException){
+            securityException.printStackTrace();
+        }
         mediaFile.setFileSize(fileSize);
         mediaFile.setLastModified(dateLastModified);
     }

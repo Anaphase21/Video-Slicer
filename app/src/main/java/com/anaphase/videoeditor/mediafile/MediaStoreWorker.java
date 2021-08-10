@@ -2,7 +2,6 @@ package com.anaphase.videoeditor.mediafile;
 
 import android.content.ContentUris;
 import android.content.Context;
-import android.content.Intent;
 import android.database.Cursor;
 import android.net.Uri;
 import android.os.Build;
@@ -10,6 +9,8 @@ import android.os.Bundle;
 import android.os.Handler;
 import android.os.Message;
 import android.provider.MediaStore;
+
+import com.anaphase.videoeditor.util.Util;
 
 import java.io.File;
 import java.util.ArrayList;
@@ -57,13 +58,13 @@ public class MediaStoreWorker implements Runnable{
                         path = cursor.getString(pathColumn);
                     }
                     //If this path does not exist, then ignore it.
-                    if(!(new File(path)).exists()){
+                    if(!(new File(path).exists())){
                         continue;
                     }
                     long id = cursor.getLong(idColumn);
                     String name = cursor.getString(nameColumn);
                     int duration = cursor.getInt(durationColumn);
-                    Uri contentUri = null;
+                    Uri contentUri;
                     if(i == 0){
                         contentUri = ContentUris.withAppendedId(
                                 Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q ? MediaStore.Video.Media.getContentUri(MediaStore.VOLUME_EXTERNAL) : MediaStore.Video.Media.EXTERNAL_CONTENT_URI, id);
@@ -90,16 +91,16 @@ public class MediaStoreWorker implements Runnable{
                     mediaFiles.add(mediaFile);
                     mediaStoreTable.put(directory, mediaFiles);
                 }
-            }catch(IllegalArgumentException illegalArgumentException){}catch (SecurityException securityException){}
+            }catch(IllegalArgumentException illegalArgumentException){
+                illegalArgumentException.printStackTrace();
+            }catch (SecurityException securityException){
+                securityException.printStackTrace();
+            }
         }
         Message message = handler.obtainMessage();
         Bundle bundle = new Bundle();
         bundle.putString("build_complete", "COMPLETE");
         message.setData(bundle);
         handler.sendMessage(message);
-    }
-
-    private void scanFile(String path){
-        context.sendBroadcast(new Intent(Intent.ACTION_MEDIA_SCANNER_SCAN_FILE, Uri.fromFile(new File(path))));
     }
 }

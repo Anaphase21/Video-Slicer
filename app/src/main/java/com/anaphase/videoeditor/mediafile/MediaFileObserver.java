@@ -10,6 +10,8 @@ import android.os.Message;
 import com.anaphase.videoeditor.util.Util;
 
 import java.io.File;
+import java.util.HashMap;
+import java.util.Map;
 
 public class MediaFileObserver extends FileObserver {
 
@@ -17,20 +19,24 @@ public class MediaFileObserver extends FileObserver {
     private Bundle bundle;
     private Message message;
     private String dir;
+    private Map<String, String> writeClosedFiles;
 
     public MediaFileObserver(String path, int mask){
         super(path, mask);
+        writeClosedFiles = new HashMap<>(16);
         dir = path;
     }
 
     public MediaFileObserver(String path){
         super(path);
+        writeClosedFiles = new HashMap<>(16);
         dir = path;
     }
 
     @TargetApi(Build.VERSION_CODES.Q)
     public MediaFileObserver(File file){
         super(file);
+        writeClosedFiles = new HashMap<>(16);
         dir = file.getPath();
     }
 
@@ -40,18 +46,20 @@ public class MediaFileObserver extends FileObserver {
 
     @Override
     public void onEvent(int event, String path){
-        File fullPath = new File(path + dir + File.separator + path);
-        if((!Util.isAudioExtension(path) && (!Util.isVideoExtension(path)) && (!(fullPath.isDirectory())))){
+        String fullPath = dir + File.separator + path;
+        if(!((Util.isAudioExtension(path) || (Util.isVideoExtension(path))))){
             return;
         }
-        
         bundle = new Bundle();
         message = handler.obtainMessage();
-        if(((event & CREATE) == CREATE) || ((event & MOVED_TO) == MOVED_TO)){
+        /*if(((event & CREATE) == CREATE) || ((event & MOVED_TO) == MOVED_TO)){
             sendMessage("+fileChange", dir + File.separator + path);
-        }else if(((event & DELETE) == DELETE) || (event & MOVED_FROM) == (MOVED_FROM)){
-            sendMessage("-fileChange", dir + File.separator + path);
-        }else if((event & CLOSE_WRITE) == CLOSE_WRITE){
+        }else**/ if(((event & DELETE) == DELETE) || (event & MOVED_FROM) == (MOVED_FROM)){
+            writeClosedFiles.remove(fullPath);
+            //sendMessage("-fileChange", dir + File.separator + path);
+        }else if(((event & CLOSE_WRITE) == CLOSE_WRITE) && (writeClosedFiles.get(fullPath) == null)){
+            writeClosedFiles.put(fullPath, fullPath);
+            sendMessage("+fileChange", fullPath);
         }
     }
 

@@ -29,7 +29,7 @@ public class MediaFile{
     private Icon fileIcon;
     private Uri uri;
     private Context context;
-    private int position;
+    private long position;
     private int fileCount;
     private boolean checked;
     private MaterialCardView cardView;
@@ -104,9 +104,6 @@ public class MediaFile{
     }
 
     public Uri getUri(){
-        if(uri == null){
-
-        }
         return uri;
     }
 
@@ -114,8 +111,12 @@ public class MediaFile{
         return this.fileIcon;
     }
 
-    public void setPosition(int position){
+    public void setPosition(long position){
         this.position = position;
+    }
+
+    public long getPosition(){
+        return position;
     }
 
     public String getFileName(){
@@ -156,7 +157,9 @@ public class MediaFile{
         if(lastModified == 0){
             try{
                  setLastModified((new File(getPath())).lastModified());
-            }catch(SecurityException securityException){}
+            }catch(SecurityException securityException){
+                securityException.printStackTrace();
+            }
         }
         return lastModified;
     }
@@ -165,16 +168,15 @@ public class MediaFile{
         if(fileSize < 0){
             try{
                 setFileSize((new File(getPath())).length());
-            }catch(SecurityException securityException){}
+            }catch(SecurityException securityException){
+                securityException.printStackTrace();
+            }
         }
         return fileSize;
     }
 
     public Bitmap getThumbnail(){
-        if(thumbnail != null) {
-            return this.thumbnail;
-        }
-        return null;
+        return this.thumbnail;
     }
 
     public boolean toggle(){
@@ -189,7 +191,7 @@ public class MediaFile{
         return ((new File(getPath())).isDirectory());
     }
 
-    public boolean isAudioTrack(){
+    public boolean isAudio(){
         return (isTrue(new String[]{".mp3", ".wav", ".aac", ".m4a"}));
     }
 
@@ -211,7 +213,7 @@ public class MediaFile{
     }
 
     private void sendMessage(String parentFile, String key){
-        Handler handler = null;
+        Handler handler;
         if(context instanceof BaseFileBrowserActivity) {
             handler = ((BaseFileBrowserActivity) context).handler;
             Bundle bundle = new Bundle();
