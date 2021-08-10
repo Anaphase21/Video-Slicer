@@ -1,5 +1,5 @@
 <resources>
-    <string name="app_name">Video Editor</string>
+    <string name="app_name">Video Slicer</string>
     <string name="title_activity_file_browser">FileBrowserActivity</string>
     <string name="bottom_toolbar_cut_item">Cut</string>
     <string name="bottom_toolbar_undo_item">Undo</string>
