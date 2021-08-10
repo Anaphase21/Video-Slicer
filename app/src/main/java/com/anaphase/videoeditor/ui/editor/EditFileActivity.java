@@ -158,9 +158,9 @@ public class EditFileActivity extends AppCompatActivity implements AlertDialogBo
         stubXPosition = (int)(scale * STUB_X_POSITION_DP);
         stubYPosition = (int)(scale * STUB_Y_POSITION_DP);
         PLAY_BUTTON_AREA_PX = scale * PLAY_BUTTON_AREA_DP;
-        timeline = (Timeline)findViewById(R.id.timeline);
+        timeline = findViewById(R.id.timeline);
         bottomAppBarLayout = findViewById(R.id.bottom_toolbar_layout);
-        topToolbar = (MaterialToolbar)findViewById(R.id.top_toolbar);
+        topToolbar = findViewById(R.id.top_toolbar);
         cutSpeedPreferencesKey = getString(R.string.cut_speed);
         inflateTopToolbarMenu();
         //setSupportActionBar(topToolbar);
@@ -168,21 +168,22 @@ public class EditFileActivity extends AppCompatActivity implements AlertDialogBo
         //actionBar.setDisplayHomeAsUpEnabled(true);
         inflateBottomToolbarMenu();
         selectPartScrollLayout = (HorizontalScrollView)getLayoutInflater().inflate(R.layout.select_part_layout, null);
-        videoView = (VideoView)findViewById(R.id.video_canvas);
-        numberPicker = (NumberPicker)findViewById(R.id.constant_interval_picker);
-        constantIntervalCheckBox = (MaterialCheckBox)findViewById(R.id.constant_interval_checkbox);
+        videoView = findViewById(R.id.video_canvas);
+        numberPicker = findViewById(R.id.constant_interval_picker);
+        constantIntervalCheckBox = findViewById(R.id.constant_interval_checkbox);
         editTypeRadioButtons = findViewById(R.id.edit_type_radio_buttons);
-        cutFile = (MaterialRadioButton)findViewById(R.id.cut_file);
-        grabMp3 = (MaterialRadioButton)findViewById(R.id.grab_mp3);
-        confirmIntervalSelection = (ImageButton)findViewById(R.id.confirm_interval_selection);
-        grabThumbnail = (MaterialRadioButton)findViewById(R.id.grab_thumbnail);
+        cutFile = findViewById(R.id.cut_file);
+        grabMp3 = findViewById(R.id.grab_mp3);
+        confirmIntervalSelection = findViewById(R.id.confirm_interval_selection);
+        grabThumbnail = findViewById(R.id.grab_thumbnail);
         views = new View[]{numberPicker, constantIntervalCheckBox, cutFile, grabMp3, grabThumbnail};
-        startTaskButton = (MaterialButton)findViewById(R.id.start_task);
+        startTaskButton = findViewById(R.id.start_task);
         taskProgressViewLayout = (LinearLayout)getLayoutInflater().inflate(R.layout.task_progress_layout, null);
         initialiseHandler();
         confirmIntervalSelectionEnabledIcon = Icon.createWithResource(this, R.drawable.ic_content_cut_24px);
         confirmIntervalSelectionDisabledIcon = Icon.createWithResource(this, R.drawable.ic_content_cut_disabled_24px);
         setCancelActionModeCallback();
+        mediaScanner = new MediaScanner(this);
     }
 
     private void initialiseHandler(){
@@ -216,7 +217,7 @@ public class EditFileActivity extends AppCompatActivity implements AlertDialogBo
         videoView.setVideoURI(Uri.fromFile(new File(path)));
         videoView.setOnTouchListener((view, motionEvent)->{
             if(motionEvent.getActionMasked() == MotionEvent.ACTION_DOWN){
-                if((motionEvent.getX() > (videoView.getWidth() / 2) - PLAY_BUTTON_AREA_PX) && (motionEvent.getX() < (videoView.getWidth() / 2) + PLAY_BUTTON_AREA_PX)) {
+                if((motionEvent.getX() > (videoView.getWidth() / 2.0f) - PLAY_BUTTON_AREA_PX) && (motionEvent.getX() < (videoView.getWidth() / 2.0f) + PLAY_BUTTON_AREA_PX)) {
                     switch (playerState) {
                         case STOPPED:
                             videoView.start();
@@ -245,7 +246,7 @@ public class EditFileActivity extends AppCompatActivity implements AlertDialogBo
                 }
                 long currentTime = System.currentTimeMillis();
                 if((currentTime - lastActionTime) <= 300L){
-                    if((motionEvent.getX() < (videoView.getWidth() / 2) - PLAY_BUTTON_AREA_PX) && (lastActionXLocation < (videoView.getWidth() / 2) - PLAY_BUTTON_AREA_PX)){
+                    if((motionEvent.getX() < (videoView.getWidth() / 2.0f) - PLAY_BUTTON_AREA_PX) && (lastActionXLocation < (videoView.getWidth() / 2.0f) - PLAY_BUTTON_AREA_PX)){
                         //seek() backward
                         int currentPlaybackPosition = videoView.getCurrentPosition();
                         int videoDuration = videoView.getDuration();
@@ -258,7 +259,7 @@ public class EditFileActivity extends AppCompatActivity implements AlertDialogBo
                         }
                         //timeline.invalidate();
                         return true;
-                    }else if((motionEvent.getX() > (videoView.getWidth() / 2) + PLAY_BUTTON_AREA_PX) && (lastActionXLocation > (videoView.getWidth() / 2) + PLAY_BUTTON_AREA_PX)){
+                    }else if((motionEvent.getX() > (videoView.getWidth() / 2.0f) + PLAY_BUTTON_AREA_PX) && (lastActionXLocation > (videoView.getWidth() / 2.0f) + PLAY_BUTTON_AREA_PX)){
                         //seek() forward
                         int currentPlaybackPosition = videoView.getCurrentPosition();
                         int videoDuration = videoView.getDuration();
@@ -332,7 +333,7 @@ public class EditFileActivity extends AppCompatActivity implements AlertDialogBo
     }
 
     private void inflateBottomToolbarMenu(){
-        bottomToolbar = (MaterialToolbar)findViewById(R.id.bottom_toolbar);
+        bottomToolbar = findViewById(R.id.bottom_toolbar);
         bottomToolbar.inflateMenu(R.menu.bottom_toolbar_menu);
         Menu menu = bottomToolbar.getMenu();
         cutItem = menu.getItem(2);
@@ -476,7 +477,7 @@ public class EditFileActivity extends AppCompatActivity implements AlertDialogBo
             path = (String) intent.getCharSequenceExtra("path");
             this.path = path;
             String decoded = Uri.decode(path);
-            fileName = decoded.substring(decoded.lastIndexOf('/') + 1, decoded.lastIndexOf('.'));
+            fileName = decoded.substring(decoded.lastIndexOf('/') + 1);
         }
         if(path == null){
             path = this.path;
