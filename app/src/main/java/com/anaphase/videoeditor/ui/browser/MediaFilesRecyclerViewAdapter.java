@@ -8,6 +8,7 @@ import android.view.ViewGroup;
 import android.widget.ImageView;
 import android.widget.TextView;
 
+import androidx.annotation.NonNull;
 import androidx.constraintlayout.widget.ConstraintLayout;
 import androidx.recyclerview.widget.RecyclerView;
 
@@ -37,6 +38,7 @@ public class MediaFilesRecyclerViewAdapter extends RecyclerView.Adapter<MediaFil
     }
 
     @Override
+    @NonNull
     public MediaFilesRecyclerViewAdapter.MediaFileViewHolder onCreateViewHolder(ViewGroup parent, int viewType){
         MaterialCardView cardView = (MaterialCardView) LayoutInflater.from(parent.getContext()).inflate(R.layout.media_file_cardview_layout, parent, false);
         cardView.setCheckable(true);
@@ -60,7 +62,6 @@ public class MediaFilesRecyclerViewAdapter extends RecyclerView.Adapter<MediaFil
         viewHolder.mediaCardView.setChecked(mediaFile.isChecked());
 //        mediaFile.setCheckedState(viewHolder.mediaCardView.isChecked());
         Context context = viewHolder.mediaCardView.getContext();
-
         viewHolder.mediaCardView.setOnLongClickListener((e)->{
             //if((context instanceof ResultsActivity) || (context instanceof FileBrowserActivity)) {
             if(context instanceof BaseFileBrowserActivity){
@@ -92,10 +93,9 @@ public class MediaFilesRecyclerViewAdapter extends RecyclerView.Adapter<MediaFil
                             fbActivity.populateMediaFiles(fbActivity.listFiles());
                             fbActivity.setMediaFilesOnlyCount();
                             fbActivity.recyclerView.scrollToPosition(0);
-                        }else if(mediaFile.isAudioTrack() || mediaFile.isVideo()){
+                        }else if(mediaFile.isAudio() || mediaFile.isVideo()){
                             fbActivity.openFileInEditor(mediaFile.getPath());
                         }
-                        fbActivity = null;
                     }else if(context instanceof MediaStoreFileBrowser){
                         MediaStoreFileBrowser mSActivity = ((MediaStoreFileBrowser)context);
                         if(mediaFile.isDirectory()) {
@@ -125,18 +125,18 @@ public class MediaFilesRecyclerViewAdapter extends RecyclerView.Adapter<MediaFil
                     ((TextView)view).setText(text);
                     break;
                 case R.id.media_file_name:
-                    ((TextView)view).setText(mediaFile.getFileName());
+                    ((TextView)view).setText(mediaFile.getFileName() == null ? "" : mediaFile.getFileName());
                     break;
                 case R.id.media_file_thumbnail:
                     thumbnail = mediaFile.getThumbnail();
-                    if(mediaFile.isAudioTrack()){
+                    if(mediaFile.isAudio()){
                         ((ImageView)view).setImageIcon(mediaFile.getFileIcon());
                     }else if((new File(mediaFile.getPath())).isDirectory()){
                         ((ImageView)view).setImageIcon(mediaFile.getFileIcon());
                     }else if(mediaFile.isVideo()){
-                        ((ImageView)view).setImageBitmap(thumbnail);
+                        ((ImageView) view).setImageBitmap(thumbnail);
                     }else if(mediaFile.isImage()){
-                        ((ImageView)view).setImageBitmap(thumbnail);
+                        ((ImageView) view).setImageBitmap(thumbnail);
                     }
                     break;
                 case R.id.media_file_size:

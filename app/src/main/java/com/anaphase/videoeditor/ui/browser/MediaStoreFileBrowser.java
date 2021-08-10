@@ -34,7 +34,6 @@ import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.ThreadPoolExecutor;
-import java.util.concurrent.TimeUnit;
 
 public class MediaStoreFileBrowser extends BaseFileBrowserActivity {
 
@@ -60,12 +59,12 @@ public class MediaStoreFileBrowser extends BaseFileBrowserActivity {
             currentDirectory = "";
         }
         initialiseHandler();
-        layout = (AppBarLayout)findViewById(R.id.top_toolbar_layout);
+        layout = findViewById(R.id.top_toolbar_layout);
         RecyclerView.ItemAnimator animator = recyclerView.getItemAnimator();
         if(animator instanceof SimpleItemAnimator){
             ((SimpleItemAnimator)animator).setSupportsChangeAnimations(false);
         }
-        materialToolbar = (MaterialToolbar)findViewById(R.id.top_toolbar);
+        materialToolbar = findViewById(R.id.top_toolbar);
         materialToolbar.setSubtitle(currentDirectory);
         recyclerViewAdapter = new MediaFilesRecyclerViewAdapter(mediaFiles);
         recyclerView.setAdapter(recyclerViewAdapter);
@@ -128,7 +127,7 @@ public class MediaStoreFileBrowser extends BaseFileBrowserActivity {
                 if(!filePathAdded.isEmpty()){
                     File file = new File(filePathAdded);
                     if(file.isDirectory()){
-                        mediaStoreTable.put(file.getPath(), new ArrayList<MediaFile>());
+                        mediaStoreTable.put(file.getPath(), new ArrayList<>());
                         if(currentDirectory.isEmpty()){
                             ArrayList<String> directories = new ArrayList<>(mediaStoreTable.keySet());
                             directories.sort(getFileListComparator());
@@ -165,23 +164,6 @@ public class MediaStoreFileBrowser extends BaseFileBrowserActivity {
                         }
                     }
                 }
-                String filePathRemoved = bundle.getString("-fileChange", "");
-                if(!filePathRemoved.isEmpty()){
-                    File file = new File(filePathRemoved);
-                    String parent = file.getParent();
-                    if(file.isDirectory()){
-                        mediaStoreTable.remove(file.getPath());
-                    }else{
-                        ArrayList<MediaFile> mediaFiles = mediaStoreTable.get(parent);
-                        int size = mediaFiles.size();
-                        for(int i = 0; i < size; ++i){
-                            if(mediaFiles.get(i).getPath().equals(filePathRemoved)){
-                                mediaFiles.remove(i);
-                                break;
-                            }
-                        }
-                    }
-                }
             }
         };
     }
@@ -212,8 +194,8 @@ public class MediaStoreFileBrowser extends BaseFileBrowserActivity {
             recyclerView.scrollToPosition(0);
             mediaFiles.addAll(sortMediaFiles(mediaStoreTable.get(currentDirectory)));
             tasks = new LinkedBlockingQueue<>(mediaFiles.size() == 0 ? 1 : mediaFiles.size());
-            threadPoolExecutor = new ThreadPoolExecutor(3, Integer.MAX_VALUE, 1L, TimeUnit.MILLISECONDS, tasks);
-            MediaFile mediaFile = null;
+            threadPoolExecutor = new ThreadPoolExecutor(CORE_POOL_SIZE, MAX_POOL_SIZE, KEEP_ALIVE_TIME, TIME_UNIT, tasks);
+            MediaFile mediaFile;
             int len = mediaFiles.size();
             for(int i = 0; i < len; ++i){
                 mediaFile = mediaFiles.get(i);

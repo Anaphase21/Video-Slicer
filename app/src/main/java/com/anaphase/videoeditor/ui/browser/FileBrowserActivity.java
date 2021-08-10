@@ -1,8 +1,6 @@
 package com.anaphase.videoeditor.ui.browser;
 
-import android.Manifest;
 import android.content.Intent;
-import android.content.pm.PackageManager;
 import android.graphics.Paint;
 import android.graphics.Typeface;
 import android.os.Bundle;
@@ -12,8 +10,6 @@ import android.os.Message;
 
 import androidx.activity.OnBackPressedCallback;
 
-import androidx.core.app.ActivityCompat;
-import androidx.core.content.ContextCompat;
 import androidx.recyclerview.widget.RecyclerView;
 import androidx.recyclerview.widget.SimpleItemAnimator;
 
@@ -23,7 +19,6 @@ import com.anaphase.videoeditor.mediafile.MediaFile;
 import com.anaphase.videoeditor.mediafile.MediaFileInformationFetcher;
 import com.anaphase.videoeditor.mediafile.MediaFileObserver;
 import com.anaphase.videoeditor.mediafile.MediaFileObserverManager;
-import com.anaphase.videoeditor.mediafile.MediaStoreWorker;
 import com.anaphase.videoeditor.util.SortTypeEnum;
 import com.anaphase.videoeditor.util.Util;
 import com.google.android.material.appbar.AppBarLayout;
@@ -33,9 +28,7 @@ import java.io.File;
 import java.io.FileFilter;
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
 import java.util.Stack;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.stream.Collectors;
@@ -54,7 +47,6 @@ public class FileBrowserActivity extends BaseFileBrowserActivity {
     protected Handler fileHandler;
     private MediaFileObserverManager mediaFileObserverManager;
     private Thread mediaFileObserverManagerThread;
-    private Map<String, ArrayList<MediaFile>> mediaStoreTable;
     private OnBackPressedCallback onBackPressedCallback;
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -66,12 +58,12 @@ public class FileBrowserActivity extends BaseFileBrowserActivity {
             }
         }
         super.onCreate(savedInstanceState);
-        layout = (AppBarLayout)findViewById(R.id.top_toolbar_layout);
+        layout = findViewById(R.id.top_toolbar_layout);
         RecyclerView.ItemAnimator animator = recyclerView.getItemAnimator();
         if(animator instanceof SimpleItemAnimator){
             ((SimpleItemAnimator)animator).setSupportsChangeAnimations(false);
         }
-        materialToolbar = (MaterialToolbar)findViewById(R.id.top_toolbar);
+        materialToolbar = findViewById(R.id.top_toolbar);
         materialToolbar.setSubtitle(file.getPath());
         recyclerViewAdapter = new MediaFilesRecyclerViewAdapter(mediaFiles);
         recyclerView.setAdapter(recyclerViewAdapter);
@@ -148,17 +140,9 @@ public class FileBrowserActivity extends BaseFileBrowserActivity {
 
     private void initialiseBrowser(){
         getOnBackPressedDispatcher().addCallback(this, onBackPressedCallback);
-        requestPermission();
         initialiseHandler();
         initialiseMediaFileObserverManager();
         populateMediaFiles(listFiles());
-        mediaStoreTable = new HashMap<>(30);
-        startMediaStoreBuildTask();
-    }
-
-    private void startMediaStoreBuildTask(){
-        Thread thread = new Thread(new MediaStoreWorker(mediaStoreTable, this, fileHandler));
-        thread.start();
     }
 
     private ArrayList<MediaFile> checkForFileChanges(ArrayList<MediaFile> mediaFiles){
@@ -193,42 +177,33 @@ public class FileBrowserActivity extends BaseFileBrowserActivity {
             public void handleMessage(Message message){
                 Bundle bundle = message.getData();
                 String path = bundle.getString("-fileChange", null);
-                ArrayList<MediaFile> directoryContainingFileToDelete;
+                path = bundle.getString("+fileChange", null);
                 if(path != null){
-                    directoryContainingFileToDelete = mediaStoreTable.get((new File(path)).getParent());
-                    for(MediaFile mediaFile : directoryContainingFileToDelete){
-                        if(mediaFile.getPath().equals(path)){
-                            getContentResolver().delete(mediaFile.getUri(), null, null);
-                        }
-                    }
-                }else{
-                    path = bundle.getString("+fileChange", null);
-                    if(path != null){
-                        int dirrDepthIndex = path.split("/").length - 1;
-                        String directory = (new File(path)).getParent();
-                        for(FolderNode folderNode : previousFolders){
-                            if((folderNode.getDepthPosition() == dirrDepthIndex) || (file.getPath().equals(directory))){
-                                folderNode.setPath(folderNode.getPath());
-                                MediaFile mediaFile = new MediaFile();
-                                mediaFile.setContext(FileBrowserActivity.this);
-                                mediaFile.setPath(path);
-                                mediaFile.setFileName((new File(path)).getName());
-                                if(threadPoolExecutor.isShutdown()) {
-                                    threadPoolExecutor = new ThreadPoolExecutor(CORE_POOL_SIZE, MAX_POOL_SIZE, KEEP_ALIVE_TIME, TIME_UNIT, tasks);
-                                }
-                                //If the file being created or moved to is in the current directory, then add it to the mediaFiles list
-                                if(file.getPath().equals(directory)){
-                                    int position = mediaFiles.size();
-                                    mediaFiles.add(mediaFile);
-                                    recyclerViewAdapter.notifyItemInserted(position);
-                                    threadPoolExecutor.execute(new MediaFileInformationFetcher(mediaFile, handler, position));
-                                    //Otherwise add it to the appropriate directory.
-                                }else {
-                                    folderNode.addChild(mediaFile);
-                                    threadPoolExecutor.execute(new MediaFileInformationFetcher(mediaFile, null, -1));
-                                }
-                                break;
+                    int dirrDepthIndex = path.split("/").length - 1;
+                    File fileAdded = new File(path);
+                    String directory = fileAdded.getParent();
+                    for(FolderNode folderNode : previousFolders){
+                        if((folderNode.getDepthPosition() == dirrDepthIndex) || (file.getPath().equals(directory))){
+                            folderNode.setPath(folderNode.getPath());
+                            MediaFile mediaFile = new MediaFile();
+                            mediaFile.setContext(FileBrowserActivity.this);
+                            mediaFile.setPath(path);
+                            mediaFile.setFileName(fileAdded.getName());
+                            if(threadPoolExecutor.isShutdown()) {
+                                threadPoolExecutor = new ThreadPoolExecutor(CORE_POOL_SIZE, MAX_POOL_SIZE, KEEP_ALIVE_TIME, TIME_UNIT, tasks);
                             }
+                            //If the file being created or moved to is in the current directory, then add it to the mediaFiles list
+                            if(file.getPath().equals(directory)){
+                                int position = mediaFiles.size();
+                                mediaFiles.add(mediaFile);
+                                recyclerViewAdapter.notifyItemInserted(position);
+                                threadPoolExecutor.execute(new MediaFileInformationFetcher(mediaFile, handler, position));
+                                //Otherwise add it to the appropriate directory.
+                            }else {
+                                folderNode.addChild(mediaFile);
+                                threadPoolExecutor.execute(new MediaFileInformationFetcher(mediaFile, null, -1));
+                            }
+                            break;
                         }
                     }
                 }
@@ -329,7 +304,7 @@ public class FileBrowserActivity extends BaseFileBrowserActivity {
 
     protected void setMediaFilesOnlyCount(){
         if(mediaFiles != null){
-            mediaFilesOnlyCount = mediaFiles.stream().filter((e)->e.isAudioTrack() || e.isVideo()).count();
+            mediaFilesOnlyCount = mediaFiles.stream().filter((e)->e.isAudio() || e.isVideo()).count();
         }
     }
 
@@ -339,11 +314,4 @@ public class FileBrowserActivity extends BaseFileBrowserActivity {
             previousPositions.pop();
         }
     }**/
-
-    void requestPermission(){
-        if(ContextCompat.checkSelfPermission(this, Manifest.permission.WRITE_EXTERNAL_STORAGE) == PackageManager.PERMISSION_GRANTED){
-            String[] permission = new String[]{Manifest.permission.WRITE_EXTERNAL_STORAGE};
-            ActivityCompat.requestPermissions(this, permission, 100);
-        }
-    }
 }

@@ -52,7 +52,7 @@ public class BaseFileBrowserActivity extends AppCompatActivity implements AlertD
 
     protected volatile ArrayList<MediaFile> mediaFiles;
     protected RecyclerView recyclerView;
-    protected RecyclerView.Adapter recyclerViewAdapter;
+    protected RecyclerView.Adapter<MediaFilesRecyclerViewAdapter.MediaFileViewHolder> recyclerViewAdapter;
     protected RecyclerView.LayoutManager recyclerViewLayoutManager;
     protected BlockingQueue<Runnable> tasks;
     protected ThreadPoolExecutor threadPoolExecutor;
@@ -93,10 +93,10 @@ public class BaseFileBrowserActivity extends AppCompatActivity implements AlertD
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_base_file_browser);
-        appBarLayout = (AppBarLayout)findViewById(R.id.top_toolbar_layout);
-        topToolbar = (MaterialToolbar)findViewById(R.id.top_toolbar);
+        appBarLayout = findViewById(R.id.top_toolbar_layout);
+        topToolbar = findViewById(R.id.top_toolbar);
         setHandler();
-        recyclerView = (RecyclerView)findViewById(R.id.media_files_recycler_view);
+        recyclerView = findViewById(R.id.media_files_recycler_view);
         recyclerView.setHasFixedSize(true);
         recyclerViewLayoutManager = new LinearLayoutManager(this);
         recyclerView.setLayoutManager(recyclerViewLayoutManager);
@@ -128,6 +128,7 @@ public class BaseFileBrowserActivity extends AppCompatActivity implements AlertD
         String path;
         int size = paths.size();
         recyclerViewAdapter.notifyDataSetChanged();
+        //recyclerView.removeAllViews();
         for(int i = 0; i < size; ++i) {
             path = paths.get(i);
             mediaFile = new MediaFile();
@@ -173,7 +174,7 @@ public class BaseFileBrowserActivity extends AppCompatActivity implements AlertD
     }
 
     private void increaseFilesLoadedCount(String fileParentDirectory){
-        Integer count = 0;
+        Integer count;
         if(directoriesFilesLoadedCount != null) {
             count = directoriesFilesLoadedCount.get(fileParentDirectory);
             if(count != null){
@@ -292,10 +293,10 @@ public class BaseFileBrowserActivity extends AppCompatActivity implements AlertD
     }
 
     public void deleteSelectedItems(){
-        MediaFile mediaFile = null;
+        MediaFile mediaFile;
         int size = mediaFiles.size();
         int idx = 0;
-        File file = null;
+        File file;
         while(idx < size){
             mediaFile = mediaFiles.get(idx);
             if(mediaFile.isChecked()) {
@@ -326,6 +327,7 @@ public class BaseFileBrowserActivity extends AppCompatActivity implements AlertD
                     }
                 }
                 mediaFiles.remove(idx);
+                removeMediaFileFromMediaStoreTable(mediaFile.getPath(), idx);
                 --size;
                 recyclerViewAdapter.notifyItemRemoved(idx);
                 if(size == 0){
@@ -338,6 +340,17 @@ public class BaseFileBrowserActivity extends AppCompatActivity implements AlertD
         actionMode.finish();
     }
 
+    private void removeMediaFileFromMediaStoreTable(String path, int index){
+        if(this instanceof MediaStoreFileBrowser) {
+            MediaStoreFileBrowser mediaStoreFileBrowser = (MediaStoreFileBrowser) this;
+            File file = new File(path);
+            if(file.isDirectory()){
+                mediaStoreFileBrowser.mediaStoreTable.remove(path);
+            }else{
+                mediaStoreFileBrowser.mediaStoreTable.get(file.getParent()).remove(index);
+            }
+        }
+    }
     //Returns true if a file is deleted, and false, otherwise.
     //recursiveDelete will delete directories in "path", but
     //not "path" itself (that will be done by delete method).
@@ -382,7 +395,9 @@ public class BaseFileBrowserActivity extends AppCompatActivity implements AlertD
                if (file.exists()) {
                    try {
                        file.delete();
-                   }catch (SecurityException securityException){}
+                   }catch (SecurityException securityException){
+                       securityException.printStackTrace();
+                   }
                }
            }
         }
@@ -391,8 +406,8 @@ public class BaseFileBrowserActivity extends AppCompatActivity implements AlertD
 
     public ArrayList<Uri> getFilesToShare(){
         ArrayList<Uri> urisToShare = new ArrayList<>();
-        Uri uri = null;
-        String path = null;
+        Uri uri;
+        String path;
         for(MediaFile mediaFile : mediaFiles){
             if(mediaFile.isChecked()) {
                 path = mediaFile.getPath();
@@ -536,17 +551,17 @@ public class BaseFileBrowserActivity extends AppCompatActivity implements AlertD
 
     @Override
     public void onDialogNegativeClick(DialogFragment dialog){
-        return;
+
     }
 
     @Override
     public void onDialogNeutralClick(DialogFragment dialog){
-        return;
+
     }
 
     @Override
     public void onCancel(DialogInterface dialog){
-        return;
+
     }
 
     protected void enableMenuItems(){
