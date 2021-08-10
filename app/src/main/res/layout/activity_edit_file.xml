@@ -5,7 +5,7 @@
     android:id="@+id/edit_activity_layout"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    tools:context=".EditFileActivity">
+    tools:context=".ui.editor.EditFileActivity">
     <include layout="@layout/toolbar" android:id="@+id/toolbar"/>
     <VideoView
         android:id="@+id/video_canvas"
@@ -14,7 +14,7 @@
         app:layout_constraintTop_toBottomOf="@id/toolbar"
         app:layout_constraintLeft_toRightOf="parent"
         app:layout_constraintRight_toLeftOf="parent"/>
-    <com.anaphase.videoeditor.Timeline
+    <com.anaphase.videoeditor.ui.editor.Timeline
         android:id="@+id/timeline"
         android:layout_width="300dp"
         android:layout_height="43dp"
