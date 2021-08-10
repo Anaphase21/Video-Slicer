@@ -45,11 +45,12 @@ public class MainActivity extends AppCompatActivity {
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
-        topToolbar = (MaterialToolbar)findViewById(R.id.main_activity_top_toolbar);
+        topToolbar = findViewById(R.id.main_activity_top_toolbar);
         sortByPreferencesKey = getString(R.string.sort_by);
         browserStylePreferencesKey = getString(R.string.browser_type);
         inflateTopToolbarMenu();
-        chooseFile = (MaterialButton)findViewById(R.id.choose_file);
+        chooseFile = findViewById(R.id.choose_file);
+        requestStoragePermission();
         chooseFile.setOnClickListener((e)->{
             switch(browserStyleEnum){
                 case FOLDERS:
@@ -60,31 +61,20 @@ public class MainActivity extends AppCompatActivity {
                     break;
             }
         });
-        requestPermission();
     }
 
-    private void requestPermission(){
-        if (ContextCompat.checkSelfPermission(
-                this, Manifest.permission.WRITE_EXTERNAL_STORAGE) ==
-                PackageManager.PERMISSION_GRANTED) {
-            // You can use the API that requires the permission.
-            //} else if (shouldShowRequestPermissionRationale(...)) {
-            // In an educational UI, explain to the user why your app requires this
-            // permission for a specific feature to behave as expected. In this UI,
-            // include a "cancel" or "no thanks" button that allows the user to
-            // continue using your app without granting the permission.
-            //showInContextUI(...);
-        } else {
+    private void requestStoragePermission(){
+        if (!(ContextCompat.checkSelfPermission(this, Manifest.permission.WRITE_EXTERNAL_STORAGE) ==PackageManager.PERMISSION_GRANTED)) {
             String[] permissions = new String[]{Manifest.permission.WRITE_EXTERNAL_STORAGE, Manifest.permission.READ_EXTERNAL_STORAGE};
             ActivityCompat.requestPermissions(this, permissions, 1);
         }
     }
 
-    private void requestAllFilesAccess(){
+    /*private void requestAllFilesAccess(){
         Intent intent = new Intent();
         intent.setAction(Settings.ACTION_MANAGE_ALL_FILES_ACCESS_PERMISSION);
         startActivity(intent);
-    }
+    }**/
 
     private void inflateTopToolbarMenu(){
         Menu menu = topToolbar.getMenu();
