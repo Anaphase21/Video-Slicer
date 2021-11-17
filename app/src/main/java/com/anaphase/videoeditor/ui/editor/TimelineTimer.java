@@ -8,8 +8,8 @@ import android.widget.VideoView;
 public class TimelineTimer implements Runnable{
 
     private int currentPosition = 0;
-    private Handler handler;
-    private VideoView videoView;
+    private final Handler handler;
+    private final VideoView videoView;
     private volatile boolean completed = false;
     private boolean sleep = false;
     private int duration;
@@ -23,23 +23,24 @@ public class TimelineTimer implements Runnable{
 
     @Override
     public void run(){
-        Bundle bundle = new Bundle();
-        float percentage = 0.0f;
         while(!completed){
             try{
                 if(sleep){
                     Thread.sleep(1000L);
                     continue;
                 }else {
-                    Thread.sleep(5L);
+                    Thread.sleep(20L);
                 }
             }catch (InterruptedException ine){
+                ine.printStackTrace();
             }
             if(completed){
                 sendMessageForCurrentPosition(0.0f);
                 return;
             }
-            currentPosition = videoView.getCurrentPosition();
+            try {
+                currentPosition = videoView.getCurrentPosition();
+            }catch(IllegalStateException illegalStateException){}
             sendMessageForCurrentPosition(currentPosition);
         }
     }

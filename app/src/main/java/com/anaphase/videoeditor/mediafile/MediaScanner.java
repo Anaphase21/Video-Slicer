@@ -9,8 +9,8 @@ import java.util.Queue;
 
 public class MediaScanner implements MediaScannerConnection.MediaScannerConnectionClient {
 
-    private Queue<MediaFile> mediaFileQueue;
-    private MediaScannerConnection mediaScannerConnection;
+    private final Queue<MediaFile> mediaFileQueue;
+    private final MediaScannerConnection mediaScannerConnection;
 
     public MediaScanner(Context context){
         mediaScannerConnection = new MediaScannerConnection(context, this);

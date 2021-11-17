@@ -19,6 +19,7 @@ public class EditActions {
 
     public void cut(ArrayList<Pair<Integer, Integer>> times, Codec videoCodec, Codec audioCodec, String input, boolean audioOnly){
         FFmpegCommand command = new FFmpegCommand();
+        Util.createAppDirectory();
         String outputFile = Util.renameFileIncremental(Util.appendUnderscoredNumber(input));
         Pair<Integer, Integer> cutPointsPair = times.get(0);
         command.addOption(Options.SS, Util.toTimeUnitsFraction(cutPointsPair.first));
@@ -39,16 +40,17 @@ public class EditActions {
         startTask(command, times, null);
     }
 
-    public void grabThumbnails(ArrayList<Integer> thumbnailTimePoints, Codec imageCodec, String input, String framerate){
+    public void grabThumbnails(ArrayList<Integer> thumbnailTimePoints, Codec imageCodec, String input, String frameRate){
         FFmpegCommand command = new FFmpegCommand();
         String outputFile = Util.appendUnderscoredNumber(input);
         outputFile = Util.renameFileIncremental(Util.changeFileExtension(outputFile, ".jpeg"));
+        command.addOption(Options.SS, Util.toTimeUnitsFraction(thumbnailTimePoints.get(0)));
         command.addOption(Options.INPUT, input);
         command.addOption(Options.SS, Util.toTimeUnitsFraction(thumbnailTimePoints.get(0)));
         if(Settings.extractionType == Settings.ExtractionType.POINT_EXTRACTION){
             command.addOption(Options.FRAMES, "1");
-        }else {
-            command.addOption(Options.R, framerate);
+        }else {//In case range extraction is supported in the future.
+            command.addOption(Options.R, frameRate);
             command.addOption(Options.TO, Util.toTimeUnitsFraction(1000));
         }
         command.addOption(Options.CODEC, imageCodec.codecName);

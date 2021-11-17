@@ -9,7 +9,7 @@ public class MediaFileObserverManager implements Runnable{
     private volatile boolean pathRemoved;
 
     public MediaFileObserverManager(MediaFileObserver mediaFileObserver){
-        mediaFileObservers = new Stack();
+        mediaFileObservers = new Stack<>();
         mediaFileObservers.push(mediaFileObserver);
     }
 

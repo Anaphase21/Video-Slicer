@@ -17,16 +17,15 @@ import java.util.regex.Pattern;
 
 public class FFmpegTask extends Thread{
 
-    private FFmpegCommand command;
-    private Handler handler;
-    private ArrayList<Pair<Integer, Integer>> times;
+    private final FFmpegCommand command;
+    private final Handler handler;
+    private final ArrayList<Pair<Integer, Integer>> times;
     private ArrayList<Integer> thumbnailTimePoints;
-    private Pattern timePattern;
-    private Pattern durationPattern;
-    private String timeRegex = "(time=)(\\d\\d:){2}(\\d\\d\\.\\d+)";
-    private String durationRegex = "(\\d\\d:){2}(\\d\\d.\\d{2})";
+    private final Pattern timePattern;
+    private final String timeRegex = "(time=)(\\d\\d:){2}(\\d\\d\\.\\d+)";
+    //private final String durationRegex = "(\\d\\d:){2}(\\d\\d.\\d{2})";
     private int timeSoFar;
-    private Stack<Integer> previousCommandTime;
+    private final Stack<Integer> previousCommandTime;
     private int endTime;
     private ArrayList<String> paths;
 
@@ -50,7 +49,7 @@ public class FFmpegTask extends Thread{
         Config.enableLogCallback((message)-> {
             String log = message.getText();
             String sTimeSoFar = parseTime(log);
-            int progress = 0;
+            int progress;
             if (!sTimeSoFar.isEmpty()) {
                 timeSoFar = previousCommandTime.peek() + Util.convertFormattedTimeToMilliseconds(sTimeSoFar);
                 progress = Math.round((timeSoFar * 100.0f) / endTime);
@@ -60,12 +59,10 @@ public class FFmpegTask extends Thread{
                 handler.sendMessage(msg);
             }
         });
-        String lastCommandOutput;
         int numCommands = times.size();
         int commandIndex = 1;
-        String lastPosition = "0";
         String outputFileName;
-        int duration = 0;
+        int duration;
         Pair<Integer, Integer> cutPointsPair;
         paths = new ArrayList<>(times.size());
         int responseCode = FFmpeg.execute(command.toString());
@@ -80,14 +77,12 @@ public class FFmpegTask extends Thread{
         notifyFileAdded(command.getOptionValue(Options.OUTPUT));
         paths.add(command.getOptionValue(Options.OUTPUT));
         previousCommandTime.push(timeSoFar);
-        int ss = 0;
+        int ss;
         while(commandIndex < numCommands) {
             cutPointsPair = times.get(commandIndex);
-            lastCommandOutput = Config.getLastCommandOutput();
             outputFileName = Util.renameFileIncremental(command.getOptionValue(Options.OUTPUT));
             command.updateOption(Options.OUTPUT, outputFileName);
-            lastPosition = parseTime(lastCommandOutput);
-            if(cutPointsPair.first == times.get(commandIndex - 1).second) {
+            if(cutPointsPair.first.equals(times.get(commandIndex - 1).second)) {
                 ss = cutPointsPair.first;
             }else{
                 ss = times.get(commandIndex).first;
@@ -116,9 +111,8 @@ public class FFmpegTask extends Thread{
         Config.enableLogCallback((logMessage)->{
         });
         int size = thumbnailTimePoints.size();
-        paths = new ArrayList(size);
+        paths = new ArrayList<>(size);
         int responseCode = FFmpeg.execute(command.toString());
-        Bundle bundle = new Bundle();
         if((responseCode != Config.RETURN_CODE_SUCCESS) && (responseCode != Config.RETURN_CODE_CANCEL)) {
             sendErrorMessage();
             return;
@@ -127,6 +121,7 @@ public class FFmpegTask extends Thread{
             sendCancelMessage();
             return;
         }
+        notifyFileAdded(command.getOptionValue(Options.OUTPUT));
         paths.add(command.getOptionValue(Options.OUTPUT));
         int i = 0;
         int progress;

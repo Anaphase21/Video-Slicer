@@ -1,5 +1,12 @@
 package com.anaphase.videoeditor.util;
 
+import android.os.Bundle;
+import android.os.Environment;
+import android.os.Handler;
+import android.os.Message;
+
+import com.anaphase.videoeditor.mediafile.MediaStoreTable;
+
 import java.io.File;
 
 import java.text.DateFormat;
@@ -7,8 +14,12 @@ import java.util.Date;
 import java.util.concurrent.TimeUnit;
 
 public class Util {
-    private static String[] videoExtensions = {".mp4", ".webm", ".mkv", ".3gp", ".3gpp"};
-    private static String[] audioExtensions = {".mp3", ".m4a", ".aac", ".wav"};
+    private static final String[] videoExtensions = {".mp4", ".webm", ".mkv", ".3gp", ".3gpp"};
+    private static final String[] audioExtensions = {".mp3", ".m4a", ".aac", ".wav"};
+    private static final String[] imageExtensions = {".png", ".jpg", ".gif"};
+    public static final String APP_DIRECTORY_NAME = "Video Slicer";
+    public static final String PARENT_DIRECTORY = Environment.getExternalStorageDirectory() + File.separator + Environment.DIRECTORY_DCIM;
+    public static final String APP_DIRECTORY_PATH = PARENT_DIRECTORY + File.separator + APP_DIRECTORY_NAME;
 
     public static String toTimeUnits(int time){
         long hours = TimeUnit.MILLISECONDS.toHours(time);
@@ -16,7 +27,7 @@ public class Util {
         long seconds = TimeUnit.MILLISECONDS.toSeconds(time) % 60;
         String s = "";
         s += hours > 9 ? hours + ":" : "0" + hours + ":";
-        s += minutes > 9 ? minutes + ":" : "0" + minutes+":";
+        s += minutes > 9 ? minutes + ":" : "0" + minutes + ":";
         s += seconds > 9 ? seconds : "0" + seconds;
         return s;
     }
@@ -45,15 +56,24 @@ public class Util {
             minutes = Integer.parseInt(time[1]);
             hours = Integer.parseInt(time[0]);
         }catch(NumberFormatException numberFormatException){
-
+            numberFormatException.printStackTrace();
         }
-        int totalMilliseconds = milliSeconds + (minutes * 60 * 1000) + (hours * 60 * 60 * 1000);
-        return totalMilliseconds;
+        return milliSeconds + (minutes * 60 * 1000) + (hours * 60 * 60 * 1000);
     }
 
     public static String renameFileIncremental(String filePath){
-        String renamedFile = filePath;
-        File file = new File(renamedFile);
+        File file = new File(filePath);
+        String fileName = file.getName();
+        String name = fileName.substring(0, fileName.lastIndexOf("_"));
+        String renamedFile = PARENT_DIRECTORY + File.separator + APP_DIRECTORY_NAME + File.separator + name;
+        file = new File(renamedFile);
+        if(!file.exists()){
+            file.mkdir();
+            MediaStoreTable.notifyNewDirectoryCreated(file.getPath());
+        }
+        renamedFile = renamedFile + File.separator + fileName;
+        file = new File(renamedFile);
+        //MediaStoreTable.notifyNewDirectoryCreated(file.getParent());
         while(file.exists()){
             renamedFile = renameFile(renamedFile);
             file = new File(renamedFile);
@@ -63,7 +83,7 @@ public class Util {
 
     public static String changeFileExtension(String filePath, String extension){
         int lastIndexOfPeriod = filePath.lastIndexOf('.');
-        String fileExtension = filePath.substring(lastIndexOfPeriod);
+        //String fileExtension = filePath.substring(lastIndexOfPeriod);
         return filePath.substring(0, lastIndexOfPeriod).concat(extension);
     }
 
@@ -76,7 +96,7 @@ public class Util {
             nameIndex.append(ch);
             ch = filePath.charAt(--charIndex);
         }
-        int nameIdx = nameIndex.length() == 0 ? 0 : Integer.valueOf(nameIndex.reverse().toString());
+        int nameIdx = nameIndex.length() == 0 ? 0 : Integer.parseInt(nameIndex.reverse().toString());
         String fileExtension = filePath.substring(lastIndexOfPeriod);
         filePath = filePath.substring(0, ++charIndex).concat(String.valueOf(++nameIdx));
         filePath = filePath.concat(fileExtension);
@@ -103,10 +123,16 @@ public class Util {
         return false;
     }
 
+    public static boolean isImageExtention(String path){
+        if(path != null){
+            return endsWithExtension(imageExtensions, path);
+        }
+        return false;
+    }
+
     private static boolean endsWithExtension(String[] extensions, String path){
-        int len = extensions.length;
-        for(int k = 0; k < len; ++k){
-            if(path.endsWith(extensions[k])){
+        for (String extension : extensions) {
+            if (path.toLowerCase().endsWith(extension)) {
                 return true;
             }
         }
@@ -126,7 +152,7 @@ public class Util {
 
     public static String convertBytes(long bytes){
         String unit = "";
-        float converted = 0.0f;
+        float converted;
         if(bytes < 1024){
             converted = (float)bytes;
             unit = "B";
@@ -139,12 +165,26 @@ public class Util {
         }else if((converted /= 1024.0f) < 1024){
             unit = "TB";
         }
-        return String.format("%.2f", converted)+unit;
+        return String.format("%.2f", converted) + unit;
     }
 
     public static String getFormattedDate(long timeMilliseconds){
         Date date = new Date(timeMilliseconds);
-        String dateFormat = DateFormat.getDateInstance(DateFormat.SHORT).format(date);
-        return dateFormat;
+        return DateFormat.getDateInstance(DateFormat.SHORT).format(date);
+    }
+
+    public static void createAppDirectory(){
+        File file = new File(PARENT_DIRECTORY + File.separator + APP_DIRECTORY_NAME);
+        if(!file.exists()){
+            file.mkdir();
+        }
+    }
+
+    public static void sendMessage(int data, String key, Handler handler){
+        Bundle bundle = new Bundle();
+        bundle.putInt(key, data);
+        Message msg = handler.obtainMessage();
+        msg.setData(bundle);
+        handler.sendMessage(msg);
     }
 }

@@ -28,9 +28,10 @@ public class ResultsActivity extends BaseFileBrowserActivity {
         super.onCreate(savedInstanceState);
         recyclerViewAdapter = new MediaFilesRecyclerViewAdapter(mediaFiles);
         recyclerView.setAdapter(recyclerViewAdapter);
-        topToolbar = (MaterialToolbar)findViewById(R.id.top_toolbar);
+        topToolbar = findViewById(R.id.top_toolbar);
         setSupportActionBar(topToolbar);
         actionBar = getSupportActionBar();
+        assert actionBar != null;
         actionBar.setDisplayHomeAsUpEnabled(true);
         actionBar.setTitle("Select files to share or delete");
         OnBackPressedCallback onBackPressedCallback = new OnBackPressedCallback(true){

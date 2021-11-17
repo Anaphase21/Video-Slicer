@@ -28,6 +28,7 @@ import com.google.android.material.checkbox.MaterialCheckBox;
 import com.google.android.material.radiobutton.MaterialRadioButton;
 import com.google.android.material.snackbar.Snackbar;
 
+import android.annotation.SuppressLint;
 import android.app.DialogFragment;
 import android.content.DialogInterface;
 import android.content.Intent;
@@ -50,6 +51,7 @@ import android.view.MotionEvent;
 import android.view.SubMenu;
 import android.view.View;
 import android.view.ViewGroup;
+import android.widget.CompoundButton;
 import android.widget.HorizontalScrollView;
 import android.widget.ImageButton;
 import android.widget.LinearLayout;
@@ -137,7 +139,7 @@ public class EditFileActivity extends AppCompatActivity implements AlertDialogBo
     private long lastActionTime = 0L;
     private float lastActionXLocation = 0;
 
-    private final float PLAY_BUTTON_AREA_DP = 30.0F;
+    private final float PLAY_BUTTON_AREA_DP = 50.0F;
     private float PLAY_BUTTON_AREA_PX;
 
     private String cutSpeedPreferencesKey;
@@ -190,8 +192,8 @@ public class EditFileActivity extends AppCompatActivity implements AlertDialogBo
         handler = new Handler1(Looper.getMainLooper());
     }
 
+    @SuppressLint("ClickableViewAccessibility")
     private void initialiseVideo(String path){
-
         videoView.setOnCompletionListener((l)->{
             if(timer == null){
                 return;
@@ -210,6 +212,8 @@ public class EditFileActivity extends AppCompatActivity implements AlertDialogBo
                 videoView.seekTo(2);
             }else{
                 videoView.seekTo(currentPosition);
+                timeline.setSlider_x((currentPosition * 100.0f) / videoView.getDuration());
+                timeline.invalidate();
             }
             timer.setDuration(videoView.getDuration());
             timeline.setVideoView(videoView);
@@ -284,7 +288,7 @@ public class EditFileActivity extends AppCompatActivity implements AlertDialogBo
             if((what == MediaPlayer.MEDIA_ERROR_UNKNOWN) && (!(new File(path)).exists())){
                 showErrorDialog("File Error!", "The current file no longer exist. This window will close.");
             }else{
-                showErrorDialog("Unknown Error!", "An unknown Error has occured. File is probably corrupted or invalid.");
+                showErrorDialog("Unknown Error!", "An unknown Error has occurred. File is probably corrupted or invalid.");
             }
             return true;
         });
@@ -382,6 +386,11 @@ public class EditFileActivity extends AppCompatActivity implements AlertDialogBo
                             timeline.cutPoints.pop();
                             timeline.invalidate();
                             cutItem.setEnabled(true);
+                            if(timeline.getCutPoints().size() == 1){
+                                timeline.setConstantIntervalEndPoint(0.0f);
+                            }else{
+                                timeline.setConstantIntervalStartPoint(0.0f);
+                            }
                             cutItem.setIcon(cutEnabledIconResId);
                             if(timeline.cutPoints.size() == 0){
                                 undoItem.setEnabled(false);
@@ -411,6 +420,7 @@ public class EditFileActivity extends AppCompatActivity implements AlertDialogBo
                 timer.setCompleted(true);
                 timelineTimerThread.interrupt();
             }catch(SecurityException se){
+                se.printStackTrace();
             }
         }
         videoView.stopPlayback();
@@ -426,6 +436,7 @@ public class EditFileActivity extends AppCompatActivity implements AlertDialogBo
     @Override
     protected void onDestroy(){
         release();
+        Settings.savedVideoCurrentPosition = 0;
         super.onDestroy();
     }
 
@@ -439,6 +450,7 @@ public class EditFileActivity extends AppCompatActivity implements AlertDialogBo
         savedInstanceState.putInt("currentPosition", currentPosition);
         savedInstanceState.putInt("cutSpeed", cutSpeed);
         savedInstanceState.putString("path", path);
+        Settings.savedVideoCurrentPosition = currentPosition;
         super.onSaveInstanceState(savedInstanceState);
     }
 
@@ -450,6 +462,9 @@ public class EditFileActivity extends AppCompatActivity implements AlertDialogBo
     @Override
     protected void onRestoreInstanceState(Bundle bundle){
         super.onRestoreInstanceState(bundle);
+        currentPosition = bundle.getInt("currentPosition");
+        cutSpeed = bundle.getInt("cutSpeed");
+        path = bundle.getString("path");
     }
 
     @Override
@@ -459,11 +474,11 @@ public class EditFileActivity extends AppCompatActivity implements AlertDialogBo
 
     @Override
     protected void onStart(){
-        String fileName = "";
+        String fileName;
         super.onStart();
         Intent intent = getIntent();
-        String path = "";
-        if(intent.getAction() == Intent.ACTION_EDIT){
+        String path;
+        if(Intent.ACTION_EDIT.equals(intent.getAction())){
             path = intent.getDataString();
             Uri uri = Uri.parse(path);
             String[] mediaColumns = new String[]{MediaStore.Video.Media.DISPLAY_NAME, MediaStore.Video.Media.DATA};
@@ -487,20 +502,20 @@ public class EditFileActivity extends AppCompatActivity implements AlertDialogBo
         //actionBar.setTitle(decoded.substring(decoded.lastIndexOf('/')+1, decoded.lastIndexOf('.')));
         topToolbar.setTitle(fileName);
         setPlayerState(MediaPlayerState.STOPPED);
+        currentPosition = Settings.savedVideoCurrentPosition;
         initialiseVideo(path);
-        initialiseEditorUICompnents();
+        initialiseEditorUIComponents();
     }
 
     public void setCurrentPosition(int currentPosition){
         this.currentPosition = currentPosition;
     }
 
-    private void initialiseEditorUICompnents(){
+    private void initialiseEditorUIComponents(){
         numberPicker.setMaxValue(60);
         numberPicker.setMinValue(1);
-        numberPicker.setFormatter((i)->{
-            return numberPicker.getValue() == i ? "[ " + i + " ]" : String.valueOf(i);
-        });
+        numberPicker.setFormatter((i)->
+            numberPicker.getValue() == i ? "[ " + i + " ]" : String.valueOf(i));
 
         numberPicker.setOnValueChangedListener((picker, oldValue, newValue)->{
         });
@@ -512,13 +527,14 @@ public class EditFileActivity extends AppCompatActivity implements AlertDialogBo
         if(!constantIntervalCheckBox.isChecked()) {
             confirmIntervalSelection.setEnabled(false);
         }
-        confirmIntervalSelection.setOnClickListener((event)->{
-            timeline.setRegularCutPoints(numberPicker.getValue() * 1000);
-        });
+        confirmIntervalSelection.setOnClickListener((event)->
+            timeline.setRegularCutPoints(numberPicker.getValue() * 1000));
 
         constantIntervalCheckBox.setOnCheckedChangeListener((buttonView, isChecked)->{
             if(isChecked){
                 timeline.clearCutPoints();
+                timeline.setConstantIntervalEndPoint(0.0f);
+                timeline.setConstantIntervalStartPoint(0.0f);
                 timeline.invalidate();
                 undoItem.setEnabled(false);
                 undoItem.setIcon(undoDisabledIconResId);
@@ -536,8 +552,17 @@ public class EditFileActivity extends AppCompatActivity implements AlertDialogBo
             }
         });
 
-        cutFile.setChecked(true);
-        actionType = CUT;
+        if((cutFile.isChecked()) || (!grabMp3.isChecked() && !grabThumbnail.isChecked())) {
+            cutFile.setChecked(true);
+            actionType = CUT;
+        }else if(grabMp3.isChecked()){
+            actionType = GRAB_MP3;
+        }else if(grabThumbnail.isChecked()){
+            actionType = GRAB_THUMBNAILS;
+            startTaskButton.setEnabled(true);
+            setButtonState(StartTaskButtonState.START);
+        }
+
         cutFile.setOnCheckedChangeListener((buttonView, isChecked)->{
             if(isChecked){
                 actionType = CUT;
@@ -706,7 +731,7 @@ public class EditFileActivity extends AppCompatActivity implements AlertDialogBo
             float y1_pos = startTaskButton.getY();
             float y2_pos = bottomAppBarLayout.getY();
             Bundle bundle = new Bundle();
-            float h = scale * 50;
+            float h = bottomToolbar.getHeight();
             float inc = 5;
             if(y1_pos > startButtonInitialYPosition){
                 return;
@@ -721,7 +746,9 @@ public class EditFileActivity extends AppCompatActivity implements AlertDialogBo
                 handler.sendMessage(message);
                 try {
                     Thread.sleep(20);
-                }catch(InterruptedException interruptedException){}
+                }catch(InterruptedException interruptedException){
+                    interruptedException.printStackTrace();
+                }
             }
             Message message = handler.obtainMessage();
             bundle.putFloatArray("dragPos", new float[]{0.0f, 0.0f});
@@ -740,7 +767,7 @@ public class EditFileActivity extends AppCompatActivity implements AlertDialogBo
                 selectPartButtons.add((SelectPartButton)view);
             }
         }
-        Object[] selected = selectPartButtons.stream().filter((e)->e.isChecked()).map((e)->e.getCutPoints()).toArray();
+        Object[] selected = selectPartButtons.stream().filter(CompoundButton::isChecked).map(SelectPartButton::getCutPoints).toArray();
         ArrayList<Pair<Integer, Integer>> selectedParts = new ArrayList<>();
         for(Object pair : selected){
             selectedParts.add((Pair<Integer, Integer>)pair);
@@ -753,7 +780,7 @@ public class EditFileActivity extends AppCompatActivity implements AlertDialogBo
             float y1_pos = startTaskButton.getY();
             float y2_pos = bottomAppBarLayout.getY();
             Bundle bundle = new Bundle();
-            float h = scale * 50;
+            float h = bottomToolbar.getHeight();
             float inc = 5;
             while((inc < h) && (y1_pos > startButtonInitialYPosition)) {
                 y1_pos -= 5;
@@ -765,7 +792,9 @@ public class EditFileActivity extends AppCompatActivity implements AlertDialogBo
                 handler.sendMessage(message);
                 try {
                     Thread.sleep(20);
-                }catch(InterruptedException interruptedException){}
+                }catch(InterruptedException interruptedException){
+                    interruptedException.printStackTrace();
+                }
             }
         });
         th.start();
@@ -896,7 +925,10 @@ public class EditFileActivity extends AppCompatActivity implements AlertDialogBo
                 showTaskCompleteToast("Task Completed.");
                 try{
                     Thread.sleep(250L);
-                }catch (InterruptedException interruptedException){}
+                }catch (InterruptedException interruptedException){
+
+                    interruptedException.printStackTrace();
+                }
                 removeTaskProgressView();
                 restoreBottomToolbar();
                 setButtonState(StartTaskButtonState.SELECT);

@@ -5,11 +5,6 @@ import android.content.Context;
 import android.graphics.Bitmap;
 import android.graphics.drawable.Icon;
 import android.net.Uri;
-import android.os.Bundle;
-import android.os.Handler;
-import android.os.Message;
-
-import com.anaphase.videoeditor.ui.browser.BaseFileBrowserActivity;
 import com.anaphase.videoeditor.ui.browser.FileBrowserActivity;
 import com.anaphase.videoeditor.ui.browser.MediaStoreFileBrowser;
 import com.anaphase.videoeditor.util.Util;
@@ -55,9 +50,6 @@ public class MediaFile{
 
     public void setLastModified(long lastModified){
         this.lastModified = lastModified;
-        if((fileSize > -1) && (fileDuration > -1)){
-            sendMessage((new File(getPath())).getParent(), "FILE_LOADED");
-        }
     }
 
     public void setFileSize(long fileSize){
@@ -139,9 +131,8 @@ public class MediaFile{
                 setFileName("Phone Storage");
                 file = new File(getPath());
             }
-            FileFilter filter = (fileElement)->{
-                return (Util.isVideoExtension(fileElement.getPath()) || Util.isAudioExtension(fileElement.getPath()));
-            };
+            FileFilter filter = (fileElement)->
+                (Util.isVideoExtension(fileElement.getPath()) || Util.isAudioExtension(fileElement.getPath()));
 
             File[] files = file.listFiles(filter);
             return files == null ? 0 : files.length;
@@ -154,7 +145,7 @@ public class MediaFile{
     }
 
     public long getLastModified() {
-        if(lastModified == 0){
+        if(lastModified < 0){
             try{
                  setLastModified((new File(getPath())).lastModified());
             }catch(SecurityException securityException){
@@ -187,6 +178,11 @@ public class MediaFile{
         return checked;
     }
 
+    public String getParent(){
+        File file = new File(getPath());
+        return file.getParent();
+    }
+
     public boolean isDirectory(){
         return ((new File(getPath())).isDirectory());
     }
@@ -210,17 +206,5 @@ public class MediaFile{
             }
         }
         return false;
-    }
-
-    private void sendMessage(String parentFile, String key){
-        Handler handler;
-        if(context instanceof BaseFileBrowserActivity) {
-            handler = ((BaseFileBrowserActivity) context).handler;
-            Bundle bundle = new Bundle();
-            bundle.putString(key, parentFile);
-            Message msg = handler.obtainMessage();
-            msg.setData(bundle);
-            handler.sendMessage(msg);
-        }
     }
 }

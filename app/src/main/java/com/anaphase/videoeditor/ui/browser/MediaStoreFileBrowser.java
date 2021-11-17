@@ -1,5 +1,7 @@
 package com.anaphase.videoeditor.ui.browser;
 
+import static com.anaphase.videoeditor.mediafile.MediaStoreTable.mediaStoreTable;
+
 import android.content.Intent;
 import android.graphics.Paint;
 import android.graphics.Typeface;
@@ -9,43 +11,39 @@ import android.os.Environment;
 import android.os.Handler;
 import android.os.Looper;
 import android.os.Message;
+import android.view.View;
 
 import androidx.activity.OnBackPressedCallback;
 import androidx.recyclerview.widget.RecyclerView;
 import androidx.recyclerview.widget.SimpleItemAnimator;
 
+import com.anaphase.videoeditor.mediafile.MediaStoreTable;
 import com.anaphase.videoeditor.ui.editor.EditFileActivity;
 import com.anaphase.videoeditor.R;
 import com.anaphase.videoeditor.mediafile.MediaFile;
 import com.anaphase.videoeditor.mediafile.MediaFileInformationFetcher;
 import com.anaphase.videoeditor.mediafile.MediaFileObserver;
 import com.anaphase.videoeditor.mediafile.MediaScanner;
-import com.anaphase.videoeditor.mediafile.MediaStoreWorker;
 
 import com.google.android.material.appbar.AppBarLayout;
 import com.google.android.material.appbar.MaterialToolbar;
 
 import java.io.File;
 import java.util.ArrayList;
-import java.util.Comparator;
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.ThreadPoolExecutor;
 
 public class MediaStoreFileBrowser extends BaseFileBrowserActivity {
 
-    protected volatile Map<String, ArrayList<MediaFile>> mediaStoreTable;
     private MaterialToolbar materialToolbar;
     private AppBarLayout layout;
     private Paint paint;
     private float scale;
     private int scrollPosition;
-    private ArrayList<MediaFile> mediaDirectories;
+    //private ArrayList<MediaFile> mediaDirectories;
     private List<MediaFileObserver> mediaFileObservers;
-    private MediaScanner mediaScanner;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -73,22 +71,18 @@ public class MediaStoreFileBrowser extends BaseFileBrowserActivity {
         paint.setTypeface(Typeface.DEFAULT);
         paint.setLetterSpacing(0.0f);
         paint.setTextSize(scale * 15.0f);
-        mediaStoreTable = new HashMap<>(30);
-        mediaDirectories = new ArrayList<>();
-        startMediaStoreTableBuildTask();
+        //mediaDirectories = new ArrayList<>();
+        MediaStoreTable.startMediaStoreTableBuildTask(this, mediaStoreWorkerHandler);
         OnBackPressedCallback onBackPressedCallback = new OnBackPressedCallback(true){
             @Override
             public void handleOnBackPressed(){
                 if(threadPoolExecutor != null){
                     threadPoolExecutor.shutdownNow();
-                    resetNumFilesFullyLoaded();
                 }
                 if(!currentDirectory.isEmpty()) {
                     mediaFiles.clear();
-                    directoriesFilesLoadedCount.remove(currentDirectory);
                     ArrayList<String> directories = new ArrayList<>(mediaStoreTable.keySet());
-                    directories.sort(getFileListComparator());
-                    populateMediaFiles(directories);
+                    populateMediaFiles(sortStrings(directories));
                     recyclerViewAdapter.notifyDataSetChanged();
                     recyclerView.scrollToPosition(scrollPosition);
                     currentDirectory = "";
@@ -100,14 +94,7 @@ public class MediaStoreFileBrowser extends BaseFileBrowserActivity {
                 }
             }
         };
-        mediaScanner = new MediaScanner(this);
         getOnBackPressedDispatcher().addCallback(this, onBackPressedCallback);
-    }
-
-    private void startMediaStoreTableBuildTask(){
-        MediaStoreWorker worker = new MediaStoreWorker(mediaStoreTable, this, mediaStoreWorkerHandler);
-        Thread th = new Thread(worker);
-        th.start();
     }
 
     private void initialiseHandler(){
@@ -116,52 +103,46 @@ public class MediaStoreFileBrowser extends BaseFileBrowserActivity {
             public void handleMessage(Message message){
                 Bundle bundle = message.getData();
                 String mediaStoreTableBuildComplete = bundle.getString("build_complete", "");
+                int sweepAnglePercent = bundle.getInt("sweep_angle_percent", -1);
+                if(sweepAnglePercent > -1){
+                    loadingWheel.setSweepAngleAndPercentage(sweepAnglePercent);
+                }
                 if(!mediaStoreTableBuildComplete.isEmpty()){
                     ArrayList<String> directories = new ArrayList<>(mediaStoreTable.keySet());
-                    directories.sort(getFileListComparator());
-                    populateMediaFiles(directories);
+                    populateMediaFiles(sortStrings(directories));
+                    loadingWheel.setVisibility(View.GONE);
+                    loadingWheel = null;
                     recyclerViewAdapter.notifyDataSetChanged();
                     initialiseMediaFileObservers();
                 }
                 String filePathAdded = bundle.getString("+fileChange", "");
                 if(!filePathAdded.isEmpty()){
                     File file = new File(filePathAdded);
-                    if(file.isDirectory()){
-                        mediaStoreTable.put(file.getPath(), new ArrayList<>());
-                        if(currentDirectory.isEmpty()){
-                            ArrayList<String> directories = new ArrayList<>(mediaStoreTable.keySet());
-                            directories.sort(getFileListComparator());
-                            MediaFileObserver mediaFileObserver = new MediaFileObserver(file.getPath());
-                            mediaFileObserver.setHandler(mediaStoreWorkerHandler);
-                            mediaFileObserver.startWatching();
-                            populateMediaFiles(directories);
-                            recyclerViewAdapter.notifyDataSetChanged();
-                            mediaFileObservers.add(mediaFileObserver);
+                    MediaFileObserver mediaFileObserver = new MediaFileObserver(file.getPath());
+                    mediaFileObserver.setHandler(mediaStoreWorkerHandler);
+                    mediaFileObserver.startWatching();
+                    mediaFileObservers.add(mediaFileObserver);
+                    MediaFile mediaFile = new MediaFile();
+                    String path = file.getPath();
+                    String parent = file.getParent();
+                    mediaFile.setFileName(file.getName());
+                    mediaFile.setPath(path);
+                    mediaFile.setContext(MediaStoreFileBrowser.this);
+                    ArrayList<MediaFile> mediaFiles = mediaStoreTable.get(parent);
+                    if(mediaFiles == null){
+                        mediaFiles = new ArrayList<>();
+                    }
+                    mediaFiles.add(mediaFile);
+                    mediaStoreTable.put(parent, mediaFiles);
+                    if(currentDirectory.equals(parent)){
+                        MediaStoreFileBrowser.this.mediaFiles.add(mediaFile);
+                        int position = MediaStoreFileBrowser.this.mediaFiles.size() - 1;
+                        recyclerViewAdapter.notifyItemInserted(position);
+                        if(threadPoolExecutor != null){
+                            threadPoolExecutor.execute(new MediaFileInformationFetcher(mediaFile, handler, position, false));
                         }
-                    }else{
-                        MediaFile mediaFile = new MediaFile();
-                        String path = file.getPath();
-                        String parent = file.getParent();
-                        mediaFile.setFileName(file.getName());
-                        mediaFile.setPath(path);
-                        mediaFile.setContext(MediaStoreFileBrowser.this);
-                        ArrayList<MediaFile> mediaFiles = mediaStoreTable.get(parent);
-                        if(mediaFiles == null){
-                            mediaFiles = new ArrayList<>();
-                        }
-                        mediaFiles.add(mediaFile);
-                        mediaStoreTable.put(parent, mediaFiles);
-                        mediaScanner.enqueueMediaFile(mediaFile);
-                        if(currentDirectory.equals(parent)){
-                            MediaStoreFileBrowser.this.mediaFiles.add(mediaFile);
-                            int position = MediaStoreFileBrowser.this.mediaFiles.size() - 1;
-                            recyclerViewAdapter.notifyItemInserted(position);
-                            if(threadPoolExecutor != null){
-                                threadPoolExecutor.execute(new MediaFileInformationFetcher(mediaFile, handler, position));
-                            }
-                        }else if(currentDirectory.isEmpty()){
-                            recyclerViewAdapter.notifyDataSetChanged();
-                        }
+                    }else if(currentDirectory.isEmpty()){
+                        recyclerViewAdapter.notifyDataSetChanged();
                     }
                 }
             }
@@ -172,7 +153,6 @@ public class MediaStoreFileBrowser extends BaseFileBrowserActivity {
         currentDirectory = directory;
         materialToolbar.setTitle(currentDirectory);
         materialToolbar.setSubtitle((new File(currentDirectory)).getName());
-        disableMenuItems();
     }
 
     public String getCurrentDirectory(){
@@ -188,11 +168,14 @@ public class MediaStoreFileBrowser extends BaseFileBrowserActivity {
     @Override
     public void populateMediaFiles(ArrayList<String> paths){
         if(paths == null){
-            mediaDirectories.addAll(mediaFiles);
+            //mediaDirectories.addAll(mediaFiles);
             mediaFiles.clear();
             recyclerViewAdapter.notifyDataSetChanged();
             recyclerView.scrollToPosition(0);
-            mediaFiles.addAll(sortMediaFiles(mediaStoreTable.get(currentDirectory)));
+            ArrayList<MediaFile> mdFiles = mediaStoreTable.get(currentDirectory);
+            if(mdFiles != null) {
+                mediaFiles.addAll(sortMediaFiles(mdFiles));
+            }
             tasks = new LinkedBlockingQueue<>(mediaFiles.size() == 0 ? 1 : mediaFiles.size());
             threadPoolExecutor = new ThreadPoolExecutor(CORE_POOL_SIZE, MAX_POOL_SIZE, KEEP_ALIVE_TIME, TIME_UNIT, tasks);
             MediaFile mediaFile;
@@ -200,33 +183,15 @@ public class MediaStoreFileBrowser extends BaseFileBrowserActivity {
             for(int i = 0; i < len; ++i){
                 mediaFile = mediaFiles.get(i);
                 mediaFile.setContext(this);
-                threadPoolExecutor.execute(new MediaFileInformationFetcher(mediaFile, handler, i));
+                threadPoolExecutor.execute(new MediaFileInformationFetcher(mediaFile, handler, i, false));
             }
         }else{
             super.populateMediaFiles(paths);
         }
     }
 
-    private Comparator<String> getFileListComparator(){
-            Comparator<String> comparator = (str1, str2)->{
-                str1 = (new File(str1)).getName();
-                str2 = (new File(str2)).getName();
-                return str1.toUpperCase().compareTo(str2.toUpperCase());
-            };
-            return comparator;
-    }
-
-    private Comparator<MediaFile> getMediaFileComparator(){
-        Comparator<MediaFile> comparator = (mediaFile1,  mediaFile2)->{
-            String str1 = mediaFile1.getFileName();
-            String str2 = mediaFile2.getFileName();
-            return str1.toUpperCase().compareTo(str2.toUpperCase());
-        };
-        return comparator;
-    }
-
     public int getDirectoryFileCount(String path){
-        return mediaStoreTable.get(path).size();
+        return mediaStoreTable.get(path) == null ? 0 : mediaStoreTable.get(path).size();
     }
 
     public void setScrollPosition(int position){
@@ -235,13 +200,14 @@ public class MediaStoreFileBrowser extends BaseFileBrowserActivity {
 
     private void initialiseMediaFileObservers(){
         Set<String> directories = mediaStoreTable.keySet();
-        mediaFileObservers = new ArrayList<>(directories == null ? 0 : directories.size());
+        mediaFileObservers = new ArrayList<>(directories.size());
         File[] externalMediaDirs = getExternalCacheDirs();
         if(externalMediaDirs != null) {
             for (File externalMediaDir : externalMediaDirs) {
                 while(!(externalMediaDir = externalMediaDir.getParentFile()).getName().equals("Android"));
                 externalMediaDir = externalMediaDir.getParentFile();
                 if(Environment.getExternalStorageState(externalMediaDir).equals(Environment.MEDIA_MOUNTED)){
+                    assert externalMediaDir != null;
                     MediaFileObserver mediaFileObserver = new MediaFileObserver(externalMediaDir.getPath());
                     mediaFileObserver.setHandler(mediaStoreWorkerHandler);
                     mediaFileObserver.startWatching();
@@ -255,6 +221,13 @@ public class MediaStoreFileBrowser extends BaseFileBrowserActivity {
             mediaFileObserver.startWatching();
             mediaFileObservers.add(mediaFileObserver);
         }
+    }
+
+    public void addMediaFileObserver(String path){
+        MediaFileObserver mediaFileObserver = new MediaFileObserver(path);
+        mediaFileObserver.setHandler(mediaStoreWorkerHandler);
+        mediaFileObserver.startWatching();
+        mediaFileObservers.add(mediaFileObserver);
     }
 
     private void killMediaFileObservers(){
