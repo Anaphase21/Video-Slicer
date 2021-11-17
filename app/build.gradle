@@ -1,14 +1,22 @@
 apply plugin: 'com.android.application'
 
 android {
+    signingConfigs {
+        release {
+            storeFile file('/home/anaphase21/Desktop/Video Slicer/upload-keystore.jks')
+            storePassword 'ionicwizzy@21'
+            keyAlias 'upload'
+            keyPassword 'ionicwizzy@21'
+        }
+    }
     compileSdkVersion 30
-    buildToolsVersion "30.0.1"
+    buildToolsVersion "30.0.2"
 
     defaultConfig {
         applicationId "com.anaphase.videoeditor"
         minSdkVersion 24
         targetSdkVersion 30
-        versionCode 1
+        versionCode 4
         versionName "1.0"
 
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
@@ -21,10 +29,21 @@ android {
 
     buildTypes {
         release {
-            minifyEnabled false
+            minifyEnabled true
+            shrinkResources true
             proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
+            signingConfig signingConfigs.release
         }
     }
+
+    /*splits{
+        abi{
+            enable true
+            reset()
+            include "x86", "x86_64"
+            universalApk false
+        }
+    }*/
 }
 
 dependencies {
