@@ -47,5 +47,48 @@
         <item name="buttonBarPositiveButtonStyle">@style/VE.AlertButtons</item>
         <item name="buttonBarNegativeButtonStyle">@style/VE.AlertButtons</item>
         <item name="buttonBarNeutralButtonStyle">@style/VE.AlertButtons</item>
+        <item name="android:background">@color/primaryColor</item>
+    </style>
+
+    <style name="VE.Button.sw600dp" parent="VE.Button">
+        <item name="android:textSize">16.7sp</item>
+    </style>
+    <style name="VE.Buttons.sw600dp" parent="VE.Buttons">
+        <item name="android:textSize">16.7sp</item>
+    </style>
+    <style name="VE.AlertButtons.sw600dp" parent="VE.AlertButtons">
+        <item name="android:textSize">20sp</item>
+    </style>
+    <style name="VE.NumberPicker.sw600dp" parent="VE.NumberPicker">
+        <item name="android:textSize">16.7sp</item>
+    </style>
+    <style name="VE.CheckBox.sw600dp" parent="VE.Buttons">
+        <item name="android:textSize">16.7sp</item>
+    </style>
+    <style name="VE.AlertDialogTheme.sw600dp" parent="ThemeOverlay.MaterialComponents.MaterialAlertDialog">
+        <item name="buttonBarPositiveButtonStyle">@style/VE.AlertButtons.sw600dp</item>
+        <item name="buttonBarNegativeButtonStyle">@style/VE.AlertButtons.sw600dp</item>
+        <item name="buttonBarNeutralButtonStyle">@style/VE.AlertButtons.sw600dp</item>
+    </style>
+
+    <style name="VE.Button.sw720dp" parent="VE.Button">
+        <item name="android:textSize">20sp</item>
+    </style>
+    <style name="VE.Buttons.sw720dp" parent="VE.Buttons">
+        <item name="android:textSize">20sp</item>
+    </style>
+    <style name="VE.AlertButtons.sw720dp" parent="VE.AlertButtons">
+        <item name="android:textSize">24sp</item>
+    </style>
+    <style name="VE.NumberPicker.sw720dp" parent="VE.NumberPicker">
+        <item name="android:textSize">20sp</item>
+    </style>
+    <style name="VE.CheckBox.sw720dp" parent="VE.Buttons">
+        <item name="android:textSize">20sp</item>
+    </style>
+    <style name="VE.AlertDialogTheme.sw720" parent="ThemeOverlay.MaterialComponents.MaterialAlertDialog">
+        <item name="buttonBarPositiveButtonStyle">@style/VE.AlertButtons.sw720dp</item>
+        <item name="buttonBarNegativeButtonStyle">@style/VE.AlertButtons.sw720dp</item>
+        <item name="buttonBarNeutralButtonStyle">@style/VE.AlertButtons.sw720dp</item>
     </style>
 </resources>

@@ -9,4 +9,10 @@
     <string name="sort_by">com.anaphase.videoeditor.SORT_BY</string>
     <string name="browser_type">com.anaphase.videoeditor.BROWSER_TYPE</string>
     <string name="cut_speed">com.anaphase.videoeditor.CUT_SPEED</string>
+    <string name="read_media_permission_rational_message">Video Slicer needs
+        permission to access your
+     media files. Without this permission, the app won"'"t be able to display
+        any media file. Click Continue to proceed to the permissions dialog,
+        or Cancel to return.
+    </string>
 </resources>
