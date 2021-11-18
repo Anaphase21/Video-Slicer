@@ -195,7 +195,7 @@ public class MediaFile{
         return (isTrue(new String[]{".mp4", ".mkv", ".webm", ".3gp", ".3gpp"}));
     }
 
-    public boolean isImage(){return (isTrue(new String[]{".jpeg", ".png"}));}
+    public boolean isImage(){return (isTrue(new String[]{".jpeg", ".jpg", ".png"}));}
 
     private boolean isTrue(String[] extensions){
         if(path != null) {
