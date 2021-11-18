@@ -47,7 +47,10 @@ public class MediaFileObserver extends FileObserver {
     @Override
     public void onEvent(int event, String path){
         String fullPath = dir + File.separator + path;
-        if(!((Util.isAudioExtension(path) || (Util.isVideoExtension(path))))){
+        if(path == null){
+            return;
+        }
+        if(!((Util.isAudioExtension(path) || (Util.isVideoExtension(path))) || Util.isImageExtension(path))){
             return;
         }
         bundle = new Bundle();

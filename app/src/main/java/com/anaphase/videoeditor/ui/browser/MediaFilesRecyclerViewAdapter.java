@@ -145,8 +145,10 @@ public class MediaFilesRecyclerViewAdapter extends RecyclerView.Adapter<MediaFil
                             mSActivity.setCurrentDirectory(mediaFile.getPath());
                             mSActivity.populateMediaFiles(null);
                             mSActivity.setScrollPosition(position);
-                        }else{
+                        }else if(mediaFile.isAudio() || mediaFile.isVideo()){
                             mSActivity.openFileInEditor(mediaFile.getPath());
+                        }else if(mediaFile.isImage()){
+                            mSActivity.startOpenFileActivity(mediaFile.getPath());
                         }
                     }
                 }

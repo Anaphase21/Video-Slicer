@@ -82,43 +82,45 @@ public class MediaFileInformationFetcher implements Runnable{
         mediaFile.setThumbnail(thumbnail);
 
         if(!mediaFile.isDirectory()) {
-            if(mediaFile.getFileDuration() < 1) {
-                MediaMetadataRetriever metadataRetriever = new MediaMetadataRetriever();
-                try {
-                    metadataRetriever.setDataSource(mediaFile.getPath());
-                } catch (Exception exception) {
-                    exception.printStackTrace();
-                    return;
+            if (!mediaFile.isImage()) {
+                if (mediaFile.getFileDuration() < 1) {
+                    MediaMetadataRetriever metadataRetriever = new MediaMetadataRetriever();
+                    try {
+                        metadataRetriever.setDataSource(mediaFile.getPath());
+                    } catch (Exception exception) {
+                        exception.printStackTrace();
+                        return;
+                    }
+                    String duration = metadataRetriever.extractMetadata(MediaMetadataRetriever.METADATA_KEY_DURATION);
+                    if (duration != null) {
+                        mediaFile.setFileDuration(Integer.parseInt(duration));
+                    } else {
+                        mediaFile.setFileDuration(0);
+                    }
                 }
-                String duration = metadataRetriever.extractMetadata(MediaMetadataRetriever.METADATA_KEY_DURATION);
-                if (duration != null) {
-                    mediaFile.setFileDuration(Integer.parseInt(duration));
-                } else {
-                    mediaFile.setFileDuration(0);
+                Uri uri = null;
+                if (mediaFile.getUri() == null) {
+                    if (mediaFile.isVideo()) {
+                        uri = Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q ? MediaStore.Video.Media.getContentUri(MediaStore.VOLUME_EXTERNAL) :
+                                MediaStore.Video.Media.EXTERNAL_CONTENT_URI;
+                    } else if (mediaFile.isAudio()) {
+                        uri = Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q ? MediaStore.Audio.Media.getContentUri(MediaStore.VOLUME_EXTERNAL) :
+                                MediaStore.Audio.Media.EXTERNAL_CONTENT_URI;
+                    } else if (mediaFile.isImage()) {
+                        uri = Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q ? MediaStore.Images.Media.getContentUri(MediaStore.VOLUME_EXTERNAL) :
+                                MediaStore.Images.Media.EXTERNAL_CONTENT_URI;
+                    }
+                    String[] projection = new String[]{MediaStore.MediaColumns._ID};
+                    String selection = MediaStore.MediaColumns.DATA;
+                    Cursor cursor = mediaFile.getContext().getApplicationContext().getContentResolver().query(uri, projection, selection + " = ?", new String[]{mediaFile.getPath()}, null);
+                    int idCol = cursor.getColumnIndex(MediaStore.Video.Media._ID);
+                    if (cursor.moveToFirst()) {
+                        long id = cursor.getLong(idCol);
+                        Uri contentUri = ContentUris.withAppendedId(uri, id);
+                        mediaFile.setUri(contentUri);
+                    }
+                    cursor.close();
                 }
-            }
-            Uri uri = null;
-            if(mediaFile.getUri() == null) {
-                if (mediaFile.isVideo()) {
-                    uri = Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q ? MediaStore.Video.Media.getContentUri(MediaStore.VOLUME_EXTERNAL) :
-                            MediaStore.Video.Media.EXTERNAL_CONTENT_URI;
-                }else if(mediaFile.isAudio()){
-                    uri = Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q ? MediaStore.Audio.Media.getContentUri(MediaStore.VOLUME_EXTERNAL) :
-                            MediaStore.Audio.Media.EXTERNAL_CONTENT_URI;
-                }else if(mediaFile.isImage()){
-                    uri = Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q ? MediaStore.Images.Media.getContentUri(MediaStore.VOLUME_EXTERNAL) :
-                            MediaStore.Images.Media.EXTERNAL_CONTENT_URI;
-                }
-                String[] projection = new String[]{MediaStore.MediaColumns._ID};
-                String selection = MediaStore.MediaColumns.DATA;
-                Cursor cursor = mediaFile.getContext().getApplicationContext().getContentResolver().query(uri, projection, selection + " = ?", new String[]{mediaFile.getPath()}, null);
-                int idCol = cursor.getColumnIndex(MediaStore.Video.Media._ID);
-                if (cursor.moveToFirst()) {
-                    long id = cursor.getLong(idCol);
-                    Uri contentUri = ContentUris.withAppendedId(uri, id);
-                    mediaFile.setUri(contentUri);
-                }
-                cursor.close();
             }
         }
 

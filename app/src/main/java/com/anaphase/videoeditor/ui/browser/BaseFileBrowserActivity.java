@@ -34,6 +34,7 @@ import android.view.View;
 import android.webkit.MimeTypeMap;
 import android.widget.Toast;
 
+import com.anaphase.videoeditor.mediafile.MediaStoreTable;
 import com.anaphase.videoeditor.ui.AlertDialogBox;
 import com.anaphase.videoeditor.R;
 import com.anaphase.videoeditor.mediafile.MediaFile;
@@ -106,7 +107,7 @@ public class BaseFileBrowserActivity extends AppCompatActivity implements AlertD
         appBarLayout = findViewById(R.id.top_toolbar_layout);
         topToolbar = findViewById(R.id.top_toolbar);
         loadingWheel = findViewById(R.id.loading_wheel);
-        if(!(this instanceof MediaStoreFileBrowser)){
+        if(!((this instanceof MediaStoreFileBrowser) && (mediaStoreTable == null))){
             loadingWheel.setVisibility(View.GONE);
         }
         setHandler();
@@ -157,7 +158,11 @@ public class BaseFileBrowserActivity extends AppCompatActivity implements AlertD
                 mediaFile.setFileName(file.getName());
             }
             mediaFiles.add(mediaFile);
-            threadPoolExecutor.execute(new MediaFileInformationFetcher(mediaFile, handler, i, false));
+            if(mediaFile.isDirectory()){
+                threadPoolExecutor.execute(new MediaFileInformationFetcher(mediaFile, handler, i, true));
+            }else {
+                threadPoolExecutor.execute(new MediaFileInformationFetcher(mediaFile, handler, i, false));
+            }
         }
     }
 
@@ -454,6 +459,21 @@ public class BaseFileBrowserActivity extends AppCompatActivity implements AlertD
             if (shareMenuItem.isEnabled()) {
                 shareMenuItem.setEnabled(false);
                 shareMenuItem.setIcon(disabledShareIcon);
+            }
+        }
+    }
+
+    public void startOpenFileActivity(String path){
+        if(path != null) {
+            Uri uri = FileProvider.getUriForFile(this, "com.anaphase.videoeditor.fileprovider", new File(path));
+            MimeTypeMap mimeTypeMap = MimeTypeMap.getSingleton();
+            Intent intent = new Intent(Intent.ACTION_VIEW);
+            String extension = Util.getExtension(path).toLowerCase();
+            intent.setDataAndType(uri, mimeTypeMap.getMimeTypeFromExtension(extension));
+            intent.setFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
+            Intent.createChooser(intent, "Open with");
+            if(intent.resolveActivity(getPackageManager()) != null){
+                startActivity(intent);
             }
         }
     }

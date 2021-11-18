@@ -16,7 +16,7 @@ import java.util.concurrent.TimeUnit;
 public class Util {
     private static final String[] videoExtensions = {".mp4", ".webm", ".mkv", ".3gp", ".3gpp"};
     private static final String[] audioExtensions = {".mp3", ".m4a", ".aac", ".wav"};
-    private static final String[] imageExtensions = {".png", ".jpg", ".gif"};
+    private static final String[] imageExtensions = {".png", ".jpg", ".gif", ".jpeg"};
     public static final String APP_DIRECTORY_NAME = "Video Slicer";
     public static final String PARENT_DIRECTORY = Environment.getExternalStorageDirectory() + File.separator + Environment.DIRECTORY_DCIM;
     public static final String APP_DIRECTORY_PATH = PARENT_DIRECTORY + File.separator + APP_DIRECTORY_NAME;
@@ -123,7 +123,7 @@ public class Util {
         return false;
     }
 
-    public static boolean isImageExtention(String path){
+    public static boolean isImageExtension(String path){
         if(path != null){
             return endsWithExtension(imageExtensions, path);
         }

@@ -23,8 +23,8 @@ import com.anaphase.videoeditor.R;
 import com.anaphase.videoeditor.mediafile.MediaFile;
 import com.anaphase.videoeditor.mediafile.MediaFileInformationFetcher;
 import com.anaphase.videoeditor.mediafile.MediaFileObserver;
-import com.anaphase.videoeditor.mediafile.MediaScanner;
 
+import com.anaphase.videoeditor.util.Util;
 import com.google.android.material.appbar.AppBarLayout;
 import com.google.android.material.appbar.MaterialToolbar;
 
@@ -72,7 +72,11 @@ public class MediaStoreFileBrowser extends BaseFileBrowserActivity {
         paint.setLetterSpacing(0.0f);
         paint.setTextSize(scale * 15.0f);
         //mediaDirectories = new ArrayList<>();
-        MediaStoreTable.startMediaStoreTableBuildTask(this, mediaStoreWorkerHandler);
+        if(mediaStoreTable == null) {
+            MediaStoreTable.startMediaStoreTableBuildTask(this, mediaStoreWorkerHandler);
+        }else{
+            loadDirectoriesFromMediaStoreTable();
+        }
         OnBackPressedCallback onBackPressedCallback = new OnBackPressedCallback(true){
             @Override
             public void handleOnBackPressed(){
@@ -89,7 +93,7 @@ public class MediaStoreFileBrowser extends BaseFileBrowserActivity {
                     materialToolbar.setTitle(currentDirectory);
                     materialToolbar.setSubtitle(currentDirectory);
                 }else{
-                    killMediaFileObservers();
+                    //killMediaFileObservers();
                     finish();
                 }
             }
@@ -108,11 +112,7 @@ public class MediaStoreFileBrowser extends BaseFileBrowserActivity {
                     loadingWheel.setSweepAngleAndPercentage(sweepAnglePercent);
                 }
                 if(!mediaStoreTableBuildComplete.isEmpty()){
-                    ArrayList<String> directories = new ArrayList<>(mediaStoreTable.keySet());
-                    populateMediaFiles(sortStrings(directories));
-                    loadingWheel.setVisibility(View.GONE);
-                    loadingWheel = null;
-                    recyclerViewAdapter.notifyDataSetChanged();
+                    loadDirectoriesFromMediaStoreTable();
                     initialiseMediaFileObservers();
                 }
                 String filePathAdded = bundle.getString("+fileChange", "");
@@ -215,11 +215,26 @@ public class MediaStoreFileBrowser extends BaseFileBrowserActivity {
                 }
             }
         }
+        MediaFileObserver mediaFileObserver;
         for(String directory : directories){
-            MediaFileObserver mediaFileObserver = new MediaFileObserver(directory);//new File(directory));
+            mediaFileObserver = new MediaFileObserver(directory);//new File(directory));
             mediaFileObserver.setHandler(mediaStoreWorkerHandler);
             mediaFileObserver.startWatching();
             mediaFileObservers.add(mediaFileObserver);
+        }
+        File file = new File(Util.APP_DIRECTORY_PATH);
+        File[] subDirectories = file.
+                listFiles(File::isDirectory);
+        File[] sub;
+        assert subDirectories != null;
+        for(File subDirectory : subDirectories){
+            sub = subDirectory.listFiles();
+            if(sub != null && sub.length == 0){
+                mediaFileObserver = new MediaFileObserver(subDirectory.getPath());
+                mediaFileObserver.setHandler(mediaStoreWorkerHandler);
+                mediaFileObserver.startWatching();
+                mediaFileObservers.add(mediaFileObserver);
+            }
         }
     }
 
@@ -238,5 +253,15 @@ public class MediaStoreFileBrowser extends BaseFileBrowserActivity {
             mediaFileObservers.clear();
             mediaFileObservers = null;
         }
+    }
+
+    private void loadDirectoriesFromMediaStoreTable(){
+        ArrayList<String> directories = new ArrayList<>(mediaStoreTable.keySet());
+        populateMediaFiles(sortStrings(directories));
+        if(loadingWheel != null && loadingWheel.getVisibility() == View.VISIBLE) {
+            loadingWheel.setVisibility(View.GONE);
+            loadingWheel = null;
+        }
+        recyclerViewAdapter.notifyDataSetChanged();
     }
 }
