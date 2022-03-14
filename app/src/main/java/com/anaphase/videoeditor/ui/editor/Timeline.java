@@ -16,23 +16,26 @@ import java.util.ArrayList;
 import java.util.Stack;
 
 public class Timeline extends View {
-    private Paint paint = new Paint();
-    private int blurColor = (255 << 24) | (21 << 16) | (21 << 8) | 21;
+    private final Paint paint = new Paint();
+    private final Paint defaultPaint = new Paint();
+    private final int blurColor = (255 << 24) | (21 << 16) | (21 << 8) | 21;
+    private final int RED_COLOR = (255 << 24) | (200 << 16);
     private int height;
     private int width;
     private volatile float slider_x = 0.0f;
-    private float slider_y = 0.0f;
+    private final float slider_y = 0.0f;
     private final float PADDING_DP = 20.0f;
     private final float KNOB_HEIGHT_DP = 20.0f;
-    private float TEXT_SIZE_SMALL_SP = 6.0f;
-    private float TEXT_SIZE_MEDIUM_SP = 10.0f;
-    private float TIME_AREA_HEIGHT_DP = 13.0f;
-    private float scale = getResources().getDisplayMetrics().density;
-    private float offset = PADDING_DP * scale;
-    private float textSizeSmall = scale * TEXT_SIZE_SMALL_SP;
-    private float textSizeMedium = scale * TEXT_SIZE_MEDIUM_SP;
-    private float knobHeight = KNOB_HEIGHT_DP * scale;
-    private float timeAreaHeight = TIME_AREA_HEIGHT_DP * scale;
+    private final float TEXT_SIZE_SMALL_SP = 6.0f;
+    private final float TEXT_SIZE_MEDIUM_SP = 10.0f;
+    private final float TIME_AREA_HEIGHT_DP = 13.0f;
+    private final float density = getResources().getDisplayMetrics().density;
+    private final float scaledDensity = getResources().getDisplayMetrics().scaledDensity;
+    private final float offset = PADDING_DP * density;
+    private final float textSizeSmall = scaledDensity * TEXT_SIZE_SMALL_SP;
+    private final float textSizeMedium = scaledDensity * TEXT_SIZE_MEDIUM_SP;
+    private final float knobHeight = KNOB_HEIGHT_DP * density;
+    private final float timeAreaHeight = TIME_AREA_HEIGHT_DP * density;
     protected float timeBarWidth;
     private float timeBarHeight;
     private float constantIntervalStartPoint;
@@ -66,11 +69,12 @@ public class Timeline extends View {
             height = getHeight();
             timeBarHeight = height - (timeAreaHeight + knobHeight);
             timeBarWidth = width - offset;
+            offScreenBitmap = Bitmap.createBitmap(width, height, Bitmap.Config.ARGB_8888);
+            this.canvas = new Canvas(offScreenBitmap);
         }
-        offScreenBitmap = Bitmap.createBitmap(width, height, Bitmap.Config.ARGB_8888);
-        this.canvas = new Canvas(offScreenBitmap);
+        offScreenBitmap.eraseColor(0x000000);
         doubleBufferCanvas();
-        canvas.drawBitmap(offScreenBitmap,0, 0, new Paint());
+        canvas.drawBitmap(offScreenBitmap,0, 0, defaultPaint);
     }
 
     private void doubleBufferCanvas(){
@@ -80,10 +84,12 @@ public class Timeline extends View {
         canvas.drawRect(0, knobHeight, offset - (offset / 2.0f), height, paint);
         canvas.drawRect(width - (offset / 2.0f), knobHeight, width, height, paint);
         canvas.drawRect(0, knobHeight + timeBarHeight, width, height, paint);
-        paint.setColor((255 << 24) | (200 << 16));
+        paint.setColor(RED_COLOR);
         paint.setStyle(Paint.Style.FILL_AND_STROKE);
         canvas.drawRect(slider_x, slider_y, slider_x + offset, knobHeight, paint);
+        paint.setStrokeWidth(2f);
         canvas.drawLine(slider_x + (offset / 2.0f), slider_y, slider_x + (offset / 2.0f), height - timeAreaHeight, paint);
+        paint.setStrokeWidth(0.0f);
         int numCuts = cutPoints.size();
         sortedCutPoints = cutPoints.stream().sorted().toArray();
         paint.setTextSize(textSizeSmall);
@@ -96,8 +102,10 @@ public class Timeline extends View {
             }else {
                 canvas.drawText(i + 1 + "", (float) sortedCutPoints[i] + (offset / 2.0f) - 20.0f, 20, paint);
             }
-            paint.setColor((255 << 24) | (200 << 16));
+            paint.setColor(RED_COLOR);
+            paint.setStrokeWidth(2f);
             canvas.drawLine(cutPoints.elementAt(i) + offset / 2.0f, slider_y, cutPoints.elementAt(i) + offset / 2.0f, height - timeAreaHeight, paint);
+            paint.setStrokeWidth(0.0f);
         }
         if(numCuts > 0) {
             paint.setColor(TEXT_COLOR_WHITE);
@@ -117,6 +125,7 @@ public class Timeline extends View {
 
     @Override
     public boolean onTouchEvent(MotionEvent event){
+        performClick();
         if(event.getActionMasked() == MotionEvent.ACTION_DOWN){
             slider_x = getXNormalizedToBarWidth(event.getX());
             videoView.seekTo(getSeekPosition(slider_x));
@@ -132,6 +141,11 @@ public class Timeline extends View {
             return true;
         }
         return false;
+    }
+
+    @Override
+    public boolean performClick(){
+        return super.performClick();
     }
 
     public float getSlider_x(){
@@ -185,7 +199,7 @@ public class Timeline extends View {
 
     public ArrayList<Integer> getPaddedCutPoints(){
         ArrayList<Integer> sortedCuts = getCutPoints();
-        if((sortedCuts.size() == 0) || (sortedCuts.size() > 0 && sortedCuts.get(0) > 0)){
+        if((sortedCuts.size() == 0) || (sortedCuts.get(0) > 0)){
             sortedCuts.add(0, 0);
         }
         int size = sortedCuts.size();
@@ -202,8 +216,13 @@ public class Timeline extends View {
         float percentageTimeIncrement = (interval * 100.0f) / duration;
         float pixelIncrement = (percentageTimeIncrement * timeBarWidth) / 100.0f;
         float cutPoint = constantIntervalStartPoint;
-        if(constantIntervalEndPoint == 0) {
+        if(constantIntervalEndPoint == 0.0f) {
             setConstantIntervalEndPoint(timeBarWidth);
+        }
+        if((constantIntervalEndPoint > 0.0f) && (constantIntervalEndPoint < constantIntervalStartPoint)){
+            float temp = constantIntervalEndPoint;
+            constantIntervalEndPoint = constantIntervalStartPoint;
+            constantIntervalStartPoint = temp;
         }
         while((cutPoint += pixelIncrement) < constantIntervalEndPoint){
             cutPoints.push(cutPoint);
@@ -225,9 +244,5 @@ public class Timeline extends View {
         if(cutPoints != null){
             cutPoints.clear();
         }
-    }
-
-    public float getTimeBarWidth(){
-        return timeBarWidth;
     }
 }

@@ -1,6 +1,9 @@
 package com.anaphase.videoeditor.ui.browser;
 
+import static com.anaphase.videoeditor.mediafile.MediaStoreTable.mediaStoreTable;
+
 import androidx.activity.OnBackPressedCallback;
+import androidx.annotation.Nullable;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.appcompat.view.ActionMode;
 import androidx.core.content.FileProvider;
@@ -8,21 +11,30 @@ import androidx.core.content.FileProvider;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
+import android.app.Activity;
 import android.app.DialogFragment;
+import android.app.PendingIntent;
 import android.content.Context;
 import android.content.DialogInterface;
 import android.content.Intent;
+import android.content.IntentSender;
 import android.net.Uri;
+import android.os.Build;
 import android.os.Bundle;
+import android.os.Environment;
 import android.os.Handler;
 import android.os.Looper;
 import android.os.Message;
+import android.provider.MediaStore;
 import android.util.AttributeSet;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.view.SubMenu;
+import android.view.View;
 import android.webkit.MimeTypeMap;
+import android.widget.Toast;
 
+import com.anaphase.videoeditor.mediafile.MediaStoreTable;
 import com.anaphase.videoeditor.ui.AlertDialogBox;
 import com.anaphase.videoeditor.R;
 import com.anaphase.videoeditor.mediafile.MediaFile;
@@ -37,9 +49,7 @@ import com.google.android.material.snackbar.Snackbar;
 
 import java.io.File;
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.ThreadPoolExecutor;
@@ -62,17 +72,17 @@ public class BaseFileBrowserActivity extends AppCompatActivity implements AlertD
     protected TimeUnit TIME_UNIT = TimeUnit.MILLISECONDS;
     public Handler handler;
     private Bundle bundle;
+    protected LoadingWheel loadingWheel;
     protected Handler mediaStoreWorkerHandler;
-    protected Map<String, Integer> directoriesFilesLoadedCount;
 
     protected ActionMode actionMode;
     private ActionMode.Callback actionModeCallback;
 
-    private ArrayList<String> filesToShare;
-
     private final int shareItemId = R.id.share_item;
     private final int selectAllItemId = R.id.select_all_item;
     private final int deleteItemId = R.id.delete_item;
+
+    private final int disabledShareIcon = R.drawable.ic_baseline_share_disabled_24;
 
     private MaterialToolbar topToolbar;
 
@@ -84,10 +94,11 @@ public class BaseFileBrowserActivity extends AppCompatActivity implements AlertD
 
     private String sortByPreferencesKey;
 
-    private int numFilesFullyLoaded;
     protected long mediaFilesOnlyCount;
 
     protected String currentDirectory;
+
+    private final int DELETE_REQUEST_CODE = 0xff;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -95,6 +106,10 @@ public class BaseFileBrowserActivity extends AppCompatActivity implements AlertD
         setContentView(R.layout.activity_base_file_browser);
         appBarLayout = findViewById(R.id.top_toolbar_layout);
         topToolbar = findViewById(R.id.top_toolbar);
+        loadingWheel = findViewById(R.id.loading_wheel);
+        if(!((this instanceof MediaStoreFileBrowser) && (mediaStoreTable == null))){
+            loadingWheel.setVisibility(View.GONE);
+        }
         setHandler();
         recyclerView = findViewById(R.id.media_files_recycler_view);
         recyclerView.setHasFixedSize(true);
@@ -115,7 +130,6 @@ public class BaseFileBrowserActivity extends AppCompatActivity implements AlertD
             }
         };
         getOnBackPressedDispatcher().addCallback(this, onBackPressedCallback);
-        directoriesFilesLoadedCount = new HashMap<>(5);
         sortByPreferencesKey = getString(R.string.sort_by);
         inflateTopToolbarMenu();
     }
@@ -129,14 +143,32 @@ public class BaseFileBrowserActivity extends AppCompatActivity implements AlertD
         int size = paths.size();
         recyclerViewAdapter.notifyDataSetChanged();
         //recyclerView.removeAllViews();
+        File file;
         for(int i = 0; i < size; ++i) {
             path = paths.get(i);
             mediaFile = new MediaFile();
             mediaFile.setContext(this);
             mediaFile.setPath(path);
-            mediaFile.setFileName((new File(path)).getName());
+            file = new File(path);
+            if(Environment.getExternalStorageDirectory().getPath().equals(path)){
+                mediaFile.setFileName("Phone Storage");
+            }else if(path.split(File.separator).length == 3){
+                mediaFile.setFileName("SD Card");
+            }else{
+                mediaFile.setFileName(file.getName());
+            }
             mediaFiles.add(mediaFile);
-            threadPoolExecutor.execute(new MediaFileInformationFetcher(mediaFile, handler, i));
+            if(mediaFile.isDirectory()){
+                threadPoolExecutor.execute(new MediaFileInformationFetcher(mediaFile, handler, i, true));
+            }else {
+                threadPoolExecutor.execute(new MediaFileInformationFetcher(mediaFile, handler, i, false));
+            }
+        }
+    }
+
+    public void initialiseThreadPoolExecutor(){
+        if((threadPoolExecutor == null) || (threadPoolExecutor.isShutdown())){
+            threadPoolExecutor = new ThreadPoolExecutor(CORE_POOL_SIZE, MAX_POOL_SIZE, KEEP_ALIVE_TIME, TIME_UNIT, tasks);
         }
     }
 
@@ -148,45 +180,14 @@ public class BaseFileBrowserActivity extends AppCompatActivity implements AlertD
                 int mediaFilePosition = bundle.getInt("loadingComplete", -1);
                 if((mediaFilePosition > -1) && (recyclerViewAdapter != null)){
                     recyclerViewAdapter.notifyItemChanged(mediaFilePosition);
-                }else{
-                    String fileParentDirectory = bundle.getString("FILE_LOADED", null);
-                    if(fileParentDirectory != null){
-                        increaseFilesLoadedCount(fileParentDirectory);
-                        Integer count = directoriesFilesLoadedCount.get(fileParentDirectory);
-                        if(BaseFileBrowserActivity.this instanceof FileBrowserActivity){
-                            FileBrowserActivity fba = (FileBrowserActivity)BaseFileBrowserActivity.this;
-                            if(count != null){
-                                if((count == mediaFilesOnlyCount) && (fba.getCurrentDirectory().equals(fileParentDirectory))){
-                                    enableMenuItems();
-                                }
-                            }
-                        }else if(BaseFileBrowserActivity.this instanceof MediaStoreFileBrowser){
-                            if(count != null){
-                                if(count == mediaFiles.size()){
-                                    enableMenuItems();
-                                }
-                            }
-                        }
-                    }
+                }else if(mediaFilePosition == mediaFiles.size() - 1){
+                    List<MediaFile> sortedMediaFiles = sortMediaFiles(mediaFiles);
+                    mediaFiles.clear();
+                    mediaFiles.addAll(sortedMediaFiles);
+                    recyclerViewAdapter.notifyDataSetChanged();
                 }
             }
         };
-    }
-
-    private void increaseFilesLoadedCount(String fileParentDirectory){
-        Integer count;
-        if(directoriesFilesLoadedCount != null) {
-            count = directoriesFilesLoadedCount.get(fileParentDirectory);
-            if(count != null){
-                directoriesFilesLoadedCount.put(fileParentDirectory, ++count);
-            }else{
-                directoriesFilesLoadedCount.put(fileParentDirectory, 1);
-            }
-        }
-    }
-
-    private void removeDirectoryCount(String fileParentDirectory){
-        directoriesFilesLoadedCount.remove(fileParentDirectory);
     }
 
     private void retrieveSettings(){
@@ -212,10 +213,6 @@ public class BaseFileBrowserActivity extends AppCompatActivity implements AlertD
         }
     }
 
-    protected void resetNumFilesFullyLoaded(){
-        numFilesFullyLoaded = 0;
-    }
-
     private void setActionModeCallback(){
         actionModeCallback = new ActionMode.Callback() {
             @Override
@@ -236,6 +233,10 @@ public class BaseFileBrowserActivity extends AppCompatActivity implements AlertD
                         ArrayList<Uri> filesToShare = getFilesToShare();
                         if((filesToShare == null) || (filesToShare.size() == 0)){
                             showInfoMessage("No item selected. Please select an item.");
+                            return false;
+                        }
+                        if(filesToShare.stream().filter(e->(new File(e.getPath())).isDirectory()).count() > 0){
+                            showInfoMessage("Can't share folders. Please unselect the folders.");
                             return false;
                         }
                         MimeTypeMap mimeTypeMap = MimeTypeMap.getSingleton();
@@ -259,13 +260,13 @@ public class BaseFileBrowserActivity extends AppCompatActivity implements AlertD
                         item.setChecked(!item.isChecked());
                         break;
                     case deleteItemId:
-                        AlertDialogBox dialog = new AlertDialogBox();
                         Bundle bundle = new Bundle();
-                        int numOfSelectedFiles = mediaFiles.stream().filter(e->{return e.isChecked();}).toArray().length;
+                        int numOfSelectedFiles = mediaFiles.stream().filter(MediaFile::isChecked).toArray().length;
                         if(numOfSelectedFiles == 0){
                             showInfoMessage("No item selected. Please select an item.");
                             return false;
                         }
+                        AlertDialogBox dialog = new AlertDialogBox();
                         String title = "Delete Selected File" + (numOfSelectedFiles == 1 ? "?" : "s?");
                         String message = "The selected file" + (numOfSelectedFiles == 1 ? "" : "s") + " will be deleted permanently from your device. Do you want to proceed?";
                         bundle.putString("title", title);
@@ -295,8 +296,10 @@ public class BaseFileBrowserActivity extends AppCompatActivity implements AlertD
     public void deleteSelectedItems(){
         MediaFile mediaFile;
         int size = mediaFiles.size();
+        int numFilesToBeRemoved = 0;
+        int firstIndex = -1;
         int idx = 0;
-        File file;
+        File file = null;
         while(idx < size){
             mediaFile = mediaFiles.get(idx);
             if(mediaFile.isChecked()) {
@@ -304,31 +307,32 @@ public class BaseFileBrowserActivity extends AppCompatActivity implements AlertD
                 mediaFile.toggle();
                 if(file.exists()) {
                     if(file.isDirectory()) {
-                        recursiveDelete(mediaFile.getPath(), false);
-                    }
-                    if(!file.isDirectory()) {
-                        if(mediaFile.getUri() == null){
-                            try {
-                                file.delete();
-                            }catch (SecurityException securityException){}
-                        }else {
+                        recursiveDelete(mediaFile.getPath(), true);
+                    }else{
+                        if(mediaFile.getUri() != null) {
                             getContentResolver().delete(mediaFile.getUri(), null, null);
+                        }else{
+                            try{
+                                file.delete();
+                            }catch(SecurityException securityException){}
+                        }
+                        if(file.exists() && (Build.VERSION.SDK_INT < Build.VERSION_CODES.R)){
+                            try{
+                                file.delete();
+                            }catch(SecurityException securityException){}
                         }
                     }
                 }else{
                     if(!file.isDirectory()) {
-                        if(mediaFile.getUri() == null){
-                            try{
-                                file.delete();
-                            }catch(SecurityException securityException){}
-                        }else {
-                            getContentResolver().delete(mediaFile.getUri(), null, null);
-                        }
+                        getContentResolver().delete(mediaFile.getUri(), null, null);
                     }
                 }
                 mediaFiles.remove(idx);
-                removeMediaFileFromMediaStoreTable(mediaFile.getPath(), idx);
+                ++numFilesToBeRemoved;
                 --size;
+                if(firstIndex < 0){
+                    firstIndex = idx;
+                }
                 recyclerViewAdapter.notifyItemRemoved(idx);
                 if(size == 0){
                     break;
@@ -337,17 +341,32 @@ public class BaseFileBrowserActivity extends AppCompatActivity implements AlertD
             }
             ++idx;
         }
+        if(file != null) {
+            removeDeletedMediaFilesFromMediaStoreTable(file.getPath());
+        }
+        Toast.makeText(this, numFilesToBeRemoved+" file" + (numFilesToBeRemoved > 1 ? "s deleted" : " deleted"), Toast.LENGTH_SHORT).show();
         actionMode.finish();
     }
 
-    private void removeMediaFileFromMediaStoreTable(String path, int index){
-        if(this instanceof MediaStoreFileBrowser) {
-            MediaStoreFileBrowser mediaStoreFileBrowser = (MediaStoreFileBrowser) this;
+    private void removeDeletedMediaFilesFromMediaStoreTable(String path){
+        if(mediaStoreTable != null) {
             File file = new File(path);
             if(file.isDirectory()){
-                mediaStoreFileBrowser.mediaStoreTable.remove(path);
+                mediaStoreTable.remove(path);
             }else{
-                mediaStoreFileBrowser.mediaStoreTable.get(file.getParent()).remove(index);
+                ArrayList<MediaFile> mediaFiles = mediaStoreTable.get(file.getParent());
+                if(mediaFiles != null) {
+                    int size = mediaFiles.size();
+                    for(int i = 0; i < size; ++i) {
+                        file = new File(mediaFiles.get(i).getPath());
+                        if(!file.exists()) {
+                            mediaFiles.remove(i);
+                            --i;
+                            --size;
+                        }
+                    }
+                }
+                mediaStoreTable.put(file.getParent(), mediaFiles);
             }
         }
     }
@@ -359,33 +378,32 @@ public class BaseFileBrowserActivity extends AppCompatActivity implements AlertD
     private boolean recursiveDelete(String path, boolean deleteTopDirectoryOfPath){
         File[] filesArray;
         if(this instanceof MediaStoreFileBrowser){
-            ArrayList<MediaFile> filesToDelete = ((MediaStoreFileBrowser)this).mediaStoreTable.get(path);
-            for(MediaFile mediaFile : filesToDelete){
-                getContentResolver().delete(mediaFile.getUri(), null, null);
+            ArrayList<MediaFile> filesToDelete = mediaStoreTable.get(path);
+            if(filesToDelete != null) {
+                for (MediaFile mediaFile : filesToDelete) {
+                    getContentResolver().delete(mediaFile.getUri(), null, null);
+                }
             }
-            try{
-                File file = new File(path);
-                file.delete();
-            }catch(SecurityException securityException){}
+            mediaStoreTable.remove(path);
             return true;
         }
         if(path != null){
-           filesArray = (new File(path)).listFiles();
-           if(filesArray.length == 0) {
+           filesArray = (new File(path)).listFiles((file)->
+                   file.isDirectory() || Util.isVideoExtension(file.getPath()) || Util.isAudioExtension(file.getPath()));
+           if(filesArray != null && filesArray.length == 0) {
                return false;
            }
-           for(File file : filesArray){
-               if(file.exists()){
-                   if(file.isDirectory()){
-                       recursiveDelete(file.getPath(), true);
-                   }else{
-                       if(this instanceof FileBrowserActivity){
-                           Handler handler = ((FileBrowserActivity)this).fileHandler;
-                           Bundle bundle = new Bundle();
-                           bundle.putString("-fileChange", file.getPath());
-                           Message message = handler.obtainMessage();
-                           message.setData(bundle);
-                           handler.sendMessage(message);
+           if(filesArray != null) {
+               for (File file : filesArray) {
+                   if (file.exists()) {
+                       if (file.isDirectory()) {
+                           if(this instanceof FileBrowserActivity) {
+                               recursiveDelete(file.getPath(), true);
+                           }
+                       } else {
+                           if (this instanceof FileBrowserActivity) {
+                               file.delete();
+                           }
                        }
                    }
                }
@@ -425,8 +443,38 @@ public class BaseFileBrowserActivity extends AppCompatActivity implements AlertD
 
     private void selectUnselectAllItems(boolean selectAll){
         int size = recyclerViewAdapter.getItemCount();
+        MediaFilesRecyclerViewAdapter mediaFilesRecyclerViewAdapter = (MediaFilesRecyclerViewAdapter)recyclerViewAdapter;
+        MediaFile mediaFile;
+        int numSelectedDirs = 0;
         for(int i = 0; i < size; ++i){
-            ((MediaFilesRecyclerViewAdapter)recyclerViewAdapter).mediaFiles.get(i).setChecked(selectAll);
+            mediaFile = mediaFiles.get(i);
+            mediaFile.setChecked(selectAll);
+            if(mediaFile.isDirectory() && mediaFile.isChecked()){
+                ++numSelectedDirs;
+            }
+        }
+        mediaFilesRecyclerViewAdapter.setNumSelectedDirs(numSelectedDirs);
+        if(numSelectedDirs > 0) {
+            MenuItem shareMenuItem = actionMode.getMenu().findItem(shareItemId);
+            if (shareMenuItem.isEnabled()) {
+                shareMenuItem.setEnabled(false);
+                shareMenuItem.setIcon(disabledShareIcon);
+            }
+        }
+    }
+
+    public void startOpenFileActivity(String path){
+        if(path != null) {
+            Uri uri = FileProvider.getUriForFile(this, "com.anaphase.videoeditor.fileprovider", new File(path));
+            MimeTypeMap mimeTypeMap = MimeTypeMap.getSingleton();
+            Intent intent = new Intent(Intent.ACTION_VIEW);
+            String extension = Util.getExtension(path).toLowerCase();
+            intent.setDataAndType(uri, mimeTypeMap.getMimeTypeFromExtension(extension));
+            intent.setFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
+            Intent.createChooser(intent, "Open with");
+            if(intent.resolveActivity(getPackageManager()) != null){
+                startActivity(intent);
+            }
         }
     }
 
@@ -499,8 +547,11 @@ public class BaseFileBrowserActivity extends AppCompatActivity implements AlertD
 
         sortByFileSizeMenuItem.setOnMenuItemClickListener((item->{
             sortByFileSizeMenuItem.setChecked(true);
+            if(sortTypeEnum == SortTypeEnum.BY_SIZE){
+                return true;
+            }
             sortTypeEnum = SortTypeEnum.BY_SIZE;
-            List<MediaFile> directories = mediaFiles.stream().filter((e)->e.isDirectory()).collect(Collectors.toList());
+            List<MediaFile> directories = mediaFiles.stream().filter(MediaFile::isDirectory).collect(Collectors.toList());
             ArrayList<MediaFile> sortedMediaFiles = sortMediaFiles(mediaFiles.stream().filter((e)
                     ->!e.isDirectory()).collect(Collectors.toList()));
             mediaFiles.clear();
@@ -513,8 +564,11 @@ public class BaseFileBrowserActivity extends AppCompatActivity implements AlertD
 
         sortByDurationMenuItem.setOnMenuItemClickListener((item->{
             sortByDurationMenuItem.setChecked(true);
+            if(sortTypeEnum == SortTypeEnum.BY_DURATION){
+                return true;
+            }
             sortTypeEnum = SortTypeEnum.BY_DURATION;
-            List<MediaFile> directories = mediaFiles.stream().filter((e)->e.isDirectory()).collect(Collectors.toList());
+            List<MediaFile> directories = mediaFiles.stream().filter(MediaFile::isDirectory).collect(Collectors.toList());
             ArrayList<MediaFile> sortedMediaFiles = sortMediaFiles(mediaFiles.stream().filter((e)
                     ->!e.isDirectory()).collect(Collectors.toList()));
             mediaFiles.clear();
@@ -528,8 +582,7 @@ public class BaseFileBrowserActivity extends AppCompatActivity implements AlertD
 
     protected ArrayList<MediaFile> sortMediaFiles(List<MediaFile> list){
         ArrayList<MediaFile> mediaFiles = new ArrayList<>(list.size());
-        mediaFiles.addAll(list.stream().filter((e)
-                ->e.isDirectory()).sorted(SortComparators.getMediaFileListComparator(sortTypeEnum)).collect(Collectors.toList()));
+        mediaFiles.addAll(list.stream().filter(MediaFile::isDirectory).sorted(SortComparators.getMediaFileListComparator(sortTypeEnum)).collect(Collectors.toList()));
         mediaFiles.addAll(list.stream().filter((e)
                 ->!e.isDirectory()).sorted(SortComparators.getMediaFileListComparator(sortTypeEnum)).collect(Collectors.toList()));
         return mediaFiles;
@@ -538,7 +591,9 @@ public class BaseFileBrowserActivity extends AppCompatActivity implements AlertD
     protected ArrayList<String> sortStrings(List<String> strings){
         ArrayList<String> sortedPaths = new ArrayList<>(strings.size());
         sortedPaths.addAll(strings.stream().filter((e)->(new File(e)).isDirectory())
-                .sorted(SortComparators.getStringListComparator(sortTypeEnum)).collect(Collectors.toList()));
+                .sorted(SortComparators.getStringListComparator
+                        (sortTypeEnum == SortTypeEnum.BY_DURATION ? SortTypeEnum.BY_NAME : sortTypeEnum))
+                .collect(Collectors.toList()));
         sortedPaths.addAll(strings.stream().filter((e)->!(new File(e)).isDirectory())
                 .sorted(SortComparators.getStringListComparator(sortTypeEnum)).collect(Collectors.toList()));
         return sortedPaths;
@@ -546,7 +601,17 @@ public class BaseFileBrowserActivity extends AppCompatActivity implements AlertD
 
     @Override
     public void onDialogPositiveClick(DialogFragment dialog){
-        deleteSelectedItems();
+        if(Build.VERSION.SDK_INT > Build.VERSION_CODES.Q){
+            List<Uri> urisToDelete = mediaFiles.stream().filter(MediaFile::isChecked).map(MediaFile::getUri).collect(Collectors.toList());
+            PendingIntent pendingIntent = MediaStore.createDeleteRequest(getContentResolver(), urisToDelete);
+            try {
+                startIntentSenderForResult(pendingIntent.getIntentSender(), DELETE_REQUEST_CODE, null, 0, 0, 0);
+            }catch(IntentSender.SendIntentException sendIntentException){
+                sendIntentException.printStackTrace();
+            }
+        }else {
+            deleteSelectedItems();
+        }
     }
 
     @Override
@@ -564,21 +629,38 @@ public class BaseFileBrowserActivity extends AppCompatActivity implements AlertD
 
     }
 
-    protected void enableMenuItems(){
-        if(topToolbar != null){
-            topToolbar.getMenu().getItem(0).setEnabled(true);
-        }
-    }
-
-    protected void disableMenuItems(){
-        if(topToolbar != null){
-            topToolbar.getMenu().getItem(0).setEnabled(false);
-        }
-    }
-
     @Override
     protected void onSaveInstanceState(Bundle savedInstanceState){
         savedInstanceState.putString("current_path", currentDirectory);
         super.onSaveInstanceState(savedInstanceState);
+    }
+
+    @Override
+    protected void onActivityResult(int requestCode, int resultCode, @Nullable Intent data){
+        super.onActivityResult(requestCode, resultCode, data);
+        if(requestCode == DELETE_REQUEST_CODE){
+            if(resultCode == Activity.RESULT_OK){
+                int size = mediaFiles.size();
+                int numFilesRemoved = 0;
+                MediaFile mediaFile = null;
+                for(int i = 0; i < size; ++i){
+                    mediaFile = mediaFiles.get(i);
+                    if(mediaFile.isChecked()){
+                        mediaFiles.remove(i);
+                        recyclerViewAdapter.notifyItemRemoved(i);
+                        --size;
+                        --i;
+                        ++numFilesRemoved;
+                    }
+                }
+                String toastMessage = numFilesRemoved + " file";
+                toastMessage += (numFilesRemoved > 1) ? "s deleted" : " deleted";
+                Toast.makeText(this, toastMessage, Toast.LENGTH_SHORT).show();
+                if(mediaFile != null) {
+                    removeDeletedMediaFilesFromMediaStoreTable(mediaFile.getPath());
+                }
+                actionMode.finish();
+            }
+        }
     }
 }

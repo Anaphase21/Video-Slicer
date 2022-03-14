@@ -12,7 +12,6 @@ import com.google.android.material.dialog.MaterialAlertDialogBuilder;
 
 public class AlertDialogBox extends DialogFragment {
     private AlertDialogListener listener;
-
     @Override
     public Dialog onCreateDialog(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -26,28 +25,25 @@ public class AlertDialogBox extends DialogFragment {
         builder.setMessage(message);
         builder.setTitle(title);
         if(positiveButton != null) {
-            builder.setPositiveButton(positiveButton, (dialog, id) -> {
-                listener.onDialogPositiveClick(AlertDialogBox.this);
-            });
+            builder.setPositiveButton(positiveButton, (dialog, id) ->
+                listener.onDialogPositiveClick(AlertDialogBox.this));
         }
         if(negativeButton != null) {
-            builder.setNegativeButton(negativeButton, (dialog, id) -> {
-                listener.onDialogNegativeClick(AlertDialogBox.this);
-            });
+            builder.setNegativeButton(negativeButton, (dialog, id) ->
+                listener.onDialogNegativeClick(AlertDialogBox.this));
         }
         if(neutralButton != null){
-            builder.setNeutralButton(neutralButton, (dialog, id)->{
-                listener.onDialogNeutralClick(AlertDialogBox.this);
-            });
+            builder.setNeutralButton(neutralButton, (dialog, id)->
+                listener.onDialogNeutralClick(AlertDialogBox.this));
         }
         return builder.create();
     }
 
     public interface AlertDialogListener{
-        public void onDialogPositiveClick(DialogFragment dialog);
-        public void onDialogNegativeClick(DialogFragment dialog);
-        public void onDialogNeutralClick(DialogFragment dialog);
-        public void onCancel(DialogInterface dialog);
+        void onDialogPositiveClick(DialogFragment dialog);
+        void onDialogNegativeClick(DialogFragment dialog);
+        void onDialogNeutralClick(DialogFragment dialog);
+        void onCancel(DialogInterface dialog);
     }
     @Override
     public void onAttach(Context context){

@@ -18,8 +18,8 @@ public class MediaFileObserver extends FileObserver {
     private Handler handler;
     private Bundle bundle;
     private Message message;
-    private String dir;
-    private Map<String, String> writeClosedFiles;
+    private final String dir;
+    private final Map<String, String> writeClosedFiles;
 
     public MediaFileObserver(String path, int mask){
         super(path, mask);
@@ -47,17 +47,20 @@ public class MediaFileObserver extends FileObserver {
     @Override
     public void onEvent(int event, String path){
         String fullPath = dir + File.separator + path;
-        if(!((Util.isAudioExtension(path) || (Util.isVideoExtension(path))))){
+        if(path == null){
+            return;
+        }
+        if(!((Util.isAudioExtension(path) || (Util.isVideoExtension(path))) || Util.isImageExtension(path))){
             return;
         }
         bundle = new Bundle();
         message = handler.obtainMessage();
         /*if(((event & CREATE) == CREATE) || ((event & MOVED_TO) == MOVED_TO)){
-            sendMessage("+fileChange", dir + File.separator + path);
-        }else**/ if(((event & DELETE) == DELETE) || (event & MOVED_FROM) == (MOVED_FROM)){
+        }else*/
+        if(((event & DELETE) == DELETE) || (event & MOVED_FROM) == (MOVED_FROM)){
             writeClosedFiles.remove(fullPath);
-            //sendMessage("-fileChange", dir + File.separator + path);
-        }else if(((event & CLOSE_WRITE) == CLOSE_WRITE) && (writeClosedFiles.get(fullPath) == null)){
+            sendMessage("-fileChange", dir + File.separator + path);
+        }else if(((event & CLOSE_WRITE) == CLOSE_WRITE)){// && (writeClosedFiles.get(fullPath) == null)){
             writeClosedFiles.put(fullPath, fullPath);
             sendMessage("+fileChange", fullPath);
         }
